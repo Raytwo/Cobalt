@@ -36,7 +36,7 @@ Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to 
 </details>
 
 ## Bug reports
-In the case where you are certain the issue comes from Cobalt itself, consider opening an issue on this repository. Eventually provide a screenshot of the error message to make it easier.
+In the case where you are certain the issue comes from Cobalt itself, consider [opening an issue on this repository](https://github.com/Raytwo/Cobalt/issues/new). Eventually provide a screenshot of the error message to make it easier.
 
 ## Special thanks
 In no particular order: ``Shadów``, ``blujay``, ``jam1garner``, ``Moonling``, ``Sierra``, ``DeathChaos``
