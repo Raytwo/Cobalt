@@ -15,7 +15,7 @@ The following feature(s) are planned or being worked on:
 ## Downloads 
 Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.
 
-### Installation and usage
+## Installation and usage
 <details>
   <summary>Switch</summary>
   
