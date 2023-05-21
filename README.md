@@ -35,6 +35,8 @@ Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to 
   6. Boot game
 </details>
 
+Put your TOML files in ``/engage/mods/<directory name of your choice>/`` for them to be detected by Cobalt.
+
 ## Bug reports
 In the case where you are certain the issue comes from Cobalt itself, consider [opening an issue on this repository](https://github.com/Raytwo/Cobalt/issues/new). Eventually provide a screenshot of the error message to make it easier.
 
