@@ -42,7 +42,7 @@ In the case where you are certain the issue comes from Cobalt itself, consider [
 
 ## Where are the sources?
 The code is not ready to be used by other people for the time being, as the project this runs on is unreleased for the same reasons. This might change in the future.
-If you are the kind of person who only use open-source homebrews, I'd rather you don't come to rant about it and just don't use this.
+If you are the kind of person who only uses open-source homebrews, I'd rather you don't come to rant about it and just don't use this.
 
 ## Special thanks
 In no particular order: ``Shadów``, ``blujay``, ``jam1garner``, ``Moonling``, ``Sierra``, ``DeathChaos``
