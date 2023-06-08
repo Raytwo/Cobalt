@@ -3,13 +3,14 @@
 ## Features
 The following feature(s) are currently implemented:
 * File addition at runtime
+* Toggleable separate mods
+* Extra settings
+* Gameplay tweaks (Smithy on battle preparations, ...)
 
 The following feature(s) are planned or being worked on:
-* Toggleable separate mods
 * Expanding memory limits (also known as the dependency IPS patches)
 * MSBT merging
 * XML merging
-* Extra settings
 * ...
 
 ## Downloads 
