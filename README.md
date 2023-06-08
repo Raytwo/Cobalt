@@ -13,6 +13,8 @@ The following feature(s) are planned or being worked on:
 * XML merging
 * ...
 
+Explanations and instructions to use the features can be found on the [Cobalt Wiki](https://github.com/Raytwo/Cobalt/wiki).
+
 ## Downloads 
 Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.
 
