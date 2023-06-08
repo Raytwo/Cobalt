@@ -46,4 +46,4 @@ The code is not ready to be used by other people for the time being, as the proj
 If you are the kind of person who only uses open-source homebrews, I'd rather you don't come to rant about it and just don't use this.
 
 ## Special thanks
-In no particular order: ``Shadów``, ``blujay``, ``jam1garner``, ``Moonling``, ``Sierra``, ``DeathChaos``
+In no particular order: ``Shadów``, ``blujay``, ``jam1garner``, ``Moonling``, ``Sierra``, ``DeathChaos``, ``Thane``, ``Sohn``
