@@ -19,6 +19,8 @@ Explanations and instructions to use the features can be found on the [Cobalt Wi
 Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.
 
 ## Installation and usage
+Only version 2.0.0 of Fire Emblem: Engage is supported.
+
 <details>
   <summary>Switch</summary>
   
