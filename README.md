@@ -7,10 +7,10 @@ The following feature(s) are currently implemented:
 * Extra settings
 * Gameplay tweaks (Smithy on battle preparations, ...)
 * XML merging (not all files are supported yet)
+* MSBT merging
 
 The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
-* MSBT merging
 * ...
 
 Explanations and instructions to use the features can be found on the [Cobalt Wiki](https://github.com/Raytwo/Cobalt/wiki).
