@@ -8,6 +8,7 @@ The following feature(s) are currently implemented:
 * Gameplay tweaks (Smithy on battle preparations, ...)
 * XML merging (not all files are supported yet)
 * MSBT merging
+* Localization support
 
 The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
