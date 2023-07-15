@@ -9,6 +9,8 @@ The following feature(s) are currently implemented:
 * XML merging (not all files are supported yet)
 * MSBT merging
 * Localization support
+* New script commands
+* Gamedata reloading at runtime
 
 The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
