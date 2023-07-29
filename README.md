@@ -8,7 +8,7 @@ The following feature(s) are currently implemented:
 * Gameplay tweaks (Smithy and Skill inheritance on battle preparations, ...)
 * XML merging (not all files are supported yet)
 * MSBT merging
-* Localization support (we are looking for contributors!)
+* Localization support ([we are looking for contributors!](https://github.com/Raytwo/Cobalt/wiki/Localization))
 * New script commands
 * Gamedata and MSBT reloading at runtime
 * Vibrations in combat
