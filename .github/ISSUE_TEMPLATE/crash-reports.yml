@@ -1,0 +1,70 @@
+name: Crash Report
+description: Software aborted or outright crashed
+title: "[Crash] Short summary of the context"
+labels: ["bug", "crash"]
+body:
+  - type: input
+    id: sys-ver
+    attributes:
+      label: System Firmware Version
+      description: The system version installed on your Nintendo Switch.
+      placeholder: ex. 11.0.1
+    validations:
+      required: true
+  - type: input
+    id: ams-ver
+    attributes:
+      label: Atmosphere Version
+      description: The version of Atmosphere currently installed on your Nintendo Switch (ignore if you run on emulator).
+      placeholder: ex. 0.18.1
+    validations:
+      required: true
+  - type: input
+    id: cobalt-ver
+    attributes:
+      label: Cobalt Version
+      description: The version of Cobalt you are currently running (check the title screen if you can reach it).
+      placeholder: ex. 0.23.0
+    validations:
+      required: true
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Can the crash be consistently reproduced?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: checkboxes
+    id: crash-timing
+    attributes:
+      label: At what moment does the crash happen?
+      description: You may select more than one. Please provide more information in the Context field below.
+      options:
+        - label: Before the Switch boot animation
+        - label: After the Switch boot animation
+        - label: While the picture is displayed on boot
+        - label: While the spinner is displayed on boot
+        - label: At random
+        - label: After a long time playing
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Provide more details, such as the steps to take to reproduce the crash
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Crash report
+      description: Get the most recent ``.log`` file from ``sd:/atmosphere/crash_reports/`` right after the crash and post the first ~100 lines. For Ryujinx, the latest file in ``/Logs``
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: modpack
+    attributes:
+      label: Minimal modpack to reproduce the crash
+      description: If a specific set of mods is necessary to reproduce the crash, please provide it
