@@ -1,0 +1,48 @@
+name: Panic
+description: Plugin has panicked
+title: "[Panic] Brief description of the issue"
+labels: ["bug", "panic"]
+body:
+  - type: input
+    id: sys-ver
+    attributes:
+      label: System Firmware Version
+      description: The system version installed on your Nintendo Switch.
+      placeholder: ex. 11.0.1
+    validations:
+      required: true
+  - type: input
+    id: ams-ver
+    attributes:
+      label: Atmosphere Version
+      description: The version of Atmosphere currently installed on your Nintendo Switch (skip this if you use a emulator).
+      placeholder: ex. 0.18.1
+    validations:
+      required: true
+  - type: input
+    id: cobalt-ver
+    attributes:
+      label: Cobalt Version
+      description: The version of Cobalt you are currently running (check the title screen if you can reach it).
+      placeholder: ex. 0.23.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproducing
+    attributes:
+      label: Steps to reproduce
+      description: Give the surrounding context and detailed informations on how to reproduce the panic.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: If a panic window with a code ending in ``69`` shows up, please select "Details" and provide a screenshot of the message. If you cannot provide a screenshot, write down the message in its entirety.
+    validations:
+      required: true
+  - type: input
+    id: modpack
+    attributes:
+      label: Minimal modpack to reproduce the panic
+      description: If a specific set of mods is necessary to reproduce the panic, please provide it in .zip or .7z form
