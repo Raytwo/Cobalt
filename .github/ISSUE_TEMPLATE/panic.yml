@@ -1,5 +1,5 @@
 name: Panic
-description: Plugin has panicked
+description: Cobalt has panicked
 title: "[Panic] Brief description of the issue"
 labels: ["bug", "panic"]
 body:
