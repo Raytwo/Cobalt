@@ -13,6 +13,7 @@ The following feature(s) are currently implemented:
 * Gamedata and MSBT reloading at runtime
 * Vibrations in combat
 * Phoenix Mode
+* Auto-update
 
 The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
