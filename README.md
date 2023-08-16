@@ -37,13 +37,11 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
 <details>
   <summary>Ryujinx</summary>
   
-  1. Right click on the game in your list, select "Open Mod directory"
-  2. Navigate ``atmosphere\contents\0100a6301214e000\exefs`` and extract the files from the zip in the ``/skyline/exefs/`` directory of Ryujinx, create them if missing
-  3. Right click on the game in your list, select "Open Atmosphere Mods directory"
-  4. Navigate back to the directory called ``sdcard``
-  5. Extract the ``engage`` directory here.
-  6. Create the following directory if it doesn't already exist: ``/engage/mods/``
-  7. Boot game
+  1. Right click on the game in your list, select "Open Atmosphere Mods directory"
+  2. Navigate back to the directory called ``sdcard``
+  3. Extract the ``release.zip`` archive here.
+  4. Create the following directory if it doesn't already exist: ``/engage/mods/``
+  5. Boot game
 </details>
 <details>
   <summary>Yuzu</summary>
