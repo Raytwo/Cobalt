@@ -50,6 +50,9 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
   No support yet!
 </details>
 
+Boot the game, make sure the Cobalt version is shown on the bottom right of the Title Scene, and you're good to go.  
+Proceed to the Wiki to find out about the [various features]((https://github.com/Raytwo/Cobalt/wiki) available!
+
 ## Bug reports
 In the case where you are certain the issue comes from Cobalt itself, consider [opening an issue on this repository](https://github.com/Raytwo/Cobalt/issues/new). Eventually provide a screenshot of the error message to make it easier.
 
