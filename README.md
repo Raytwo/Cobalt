@@ -45,9 +45,14 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
   5. Boot game
 </details>
 <details>
-  <summary>Yuzu</summary>
+  <summary>Yuzu (Early Access only)</summary>
   
-  No support yet!
+  1. Press ``File > Open yuzu folder`` in the menu bar at the top
+  2. Navigate to the ``sdmc`` folder.
+  3. Extract the ``release.zip`` archive here.
+  4. Boot game
+
+  Please note that the auto-update feature and logs are not available for the time being. No, we can not fix this.
 </details>
 
 Boot the game, make sure the Cobalt version is shown on the bottom right of the Title Scene, and you're good to go.  
