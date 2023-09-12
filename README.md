@@ -38,8 +38,8 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
 <details>
   <summary>Ryujinx</summary>
   
-  1. Right click on the game in your list, select "Open Atmosphere Mods directory"
-  2. Navigate back to the directory called ``sdcard``
+  1. Press ``File > Open Ryujinx folder`` in the menu bar at the top
+  2. Navigate to the ``sdcard`` folder.
   3. Extract the ``release.zip`` archive here.
   4. Create the following directory if it doesn't already exist: ``/engage/mods/``
   5. Boot game
@@ -50,7 +50,8 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
   1. Press ``File > Open yuzu folder`` in the menu bar at the top
   2. Navigate to the ``sdmc`` folder.
   3. Extract the ``release.zip`` archive here.
-  4. Boot game
+  4. Create the following directory if it doesn't already exist: ``/engage/mods/``
+  5. Boot game
 
   Please note that the auto-update feature and logs are not available for the time being. No, we can not fix this.
 </details>
