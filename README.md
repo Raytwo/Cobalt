@@ -60,7 +60,7 @@ Boot the game, make sure the Cobalt version is shown on the bottom right of the 
 Proceed to the Wiki to find out about the [various features](https://github.com/Raytwo/Cobalt/wiki) available!
 
 ## Bug reports
-In the case where you are certain the issue comes from Cobalt itself, consider [opening an issue on this repository](https://github.com/Raytwo/Cobalt/issues/new). Eventually provide a screenshot of the error message to make it easier.
+In the case where you are certain the issue comes from Cobalt itself, consider [opening an issue on this repository](https://github.com/Raytwo/Cobalt/issues/new/choose). Eventually provide a screenshot of the error message to make it easier.
 
 ## Where are the sources?
 The code is not ready to be used by other people for the time being, as the project this runs on is unreleased for the same reasons. This might change in the future.
