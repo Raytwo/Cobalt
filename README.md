@@ -6,7 +6,7 @@ The following feature(s) are currently implemented:
 * Toggleable separate mods
 * Extra settings
 * Gameplay tweaks (Smithy and Skill inheritance on battle preparations, ...)
-* XML merging ([not all files are supported yet](https://github.com/Raytwo/Cobalt/wiki/Gamedata-merging#list))
+* XML merging
 * MSBT merging
 * Localization support ([we are looking for contributors!](https://github.com/Raytwo/Cobalt/wiki/Localization))
 * New script commands
