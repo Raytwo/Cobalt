@@ -1,6 +1,10 @@
 # Cobalt
 
 ## Features
+
+> [!NOTE]
+> Explanations and instructions to use the features can be found on the [Cobalt Wiki](https://github.com/Raytwo/Cobalt/wiki).
+
 The following feature(s) are currently implemented:
 * File addition at runtime
 * Toggleable separate mods
@@ -19,13 +23,12 @@ The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
 * ...
 
-Explanations and instructions to use the features can be found on the [Cobalt Wiki](https://github.com/Raytwo/Cobalt/wiki).
-
 ## Downloads 
 Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.
 
 ## Installation and usage
-Only version 2.0.0 of Fire Emblem Engage is supported.
+> [!WARNING]
+> Only version 2.0.0 of Fire Emblem Engage is supported.
 
 <details>
   <summary>Switch</summary>
@@ -45,8 +48,8 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
   5. Boot game
 </details>
 <details>
-  <summary>Yuzu (Early Access only)</summary>
-  
+  <summary>Yuzu</summary>
+
   1. Press ``File > Open yuzu folder`` in the menu bar at the top
   2. Navigate to the ``sdmc`` folder.
   3. Extract the ``release.zip`` archive here.
@@ -56,10 +59,19 @@ Only version 2.0.0 of Fire Emblem Engage is supported.
   Please note that the auto-update feature and logs are not available for the time being. No, we can not fix this.
 </details>
 
+> [!NOTE]
+> Only the Early Access builds of Yuzu are currently compatible.
+
 Boot the game, make sure the Cobalt version is shown on the bottom right of the Title Scene, and you're good to go.  
 Proceed to the Wiki to find out about the [various features](https://github.com/Raytwo/Cobalt/wiki) available!
 
 ## Bug reports
+> [!IMPORTANT]
+> Before opening an issue, make sure to consult the [Wiki](https://github.com/Raytwo/Cobalt/wiki) to see if your problem is already addressed.  
+> Assuming your problem is already explained in the Wiki and you still opened an issue, we might close the issue without replying.
+> 
+> Issues are primarily meant for Cobalt contributors to keep track of genuine problems, so please do your due diligence.
+
 In the case where you are certain the issue comes from Cobalt itself, consider [opening an issue on this repository](https://github.com/Raytwo/Cobalt/issues/new/choose). Eventually provide a screenshot of the error message to make it easier.
 
 ## Where are the sources?
