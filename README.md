@@ -48,7 +48,7 @@ Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to 
   5. Boot game
 </details>
 <details>
-  <summary>Yuzu</summary>
+  <summary>Yuzu (mobile unsupported)</summary>
 
   1. Press ``File > Open yuzu folder`` in the menu bar at the top
   2. Navigate to the ``sdmc`` folder.
