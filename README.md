@@ -23,8 +23,9 @@ The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
 * ...
 
-## Downloads 
-Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.
+## Downloads  
+``GitHub``: Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.  
+``Nexus Mods``: Cobalt is also available on [Nexus Mods](https://www.nexusmods.com/fireemblemengage/mods/2), but be aware that releases might be slightly delayed there.
 
 ## Installation and usage
 > [!WARNING]
@@ -47,9 +48,18 @@ Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to 
   4. Create the following directory if it doesn't already exist: ``/engage/mods/``
   5. Boot game
 </details>
-<details>
-  <summary>Yuzu (mobile unsupported)</summary>
 
+> [!CAUTION]
+> Please be aware that Yuzu has received a DMCA takedown notice from Nintendo and as such will not be supported by Cobalt anymore.
+> This also goes for Suyu, and any kind of off-brand lemonade inspired name slapped over the source code of Yuzu.  
+> The instructions remain here for the time being, should you want to try using it anyways, but please do not send us bug reports if it doesn't work.  
+> They will not be addressed.
+> 
+<details>
+  <summary>Yuzu (mobile unsupported, support discontinued)</summary>
+
+  
+  
   1. Press ``File > Open yuzu folder`` in the menu bar at the top
   2. Navigate to the ``sdmc`` folder.
   3. Extract the ``release.zip`` archive here.
@@ -58,9 +68,6 @@ Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to 
 
   Please note that the auto-update feature and logs are not available for the time being. No, we can not fix this.
 </details>
-
-> [!NOTE]
-> Only the Early Access builds of Yuzu are currently compatible.
 
 Boot the game, make sure the Cobalt version is shown on the bottom right of the Title Scene, and you're good to go.  
 Proceed to the Wiki to find out about the [various features](https://github.com/Raytwo/Cobalt/wiki) available!
