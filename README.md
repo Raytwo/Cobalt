@@ -85,4 +85,4 @@ In the case where you are certain the issue comes from Cobalt itself, consider [
 For now, you don't! Use it as reference for plugins.
 
 ## Special thanks
-In no particular order: ``Shadów``, ``blujay``, ``jam1garner``, ``Moonling``, ``Sierra``, ``DeathChaos25``, ``Thane98``, ``Sohn``, ``DogeThis``, ``TildeHat``
+In no particular order: ``Shadów``, ``blujay``, ``jam1garner``, ``Moonling``, ``Sierra``, ``DeathChaos25``, ``Thane98``, ``Sohn``, ``DogeThis``, ``TildeHat``, ``MistressAshai``
