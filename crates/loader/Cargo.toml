@@ -1,0 +1,11 @@
+[package]
+name = "loader"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = "1.0.30"
+skyline = { git = "https://github.com/Raytwo/skyline-rs", branch = "preview" }
+horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" }

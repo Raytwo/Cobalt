@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Book Count="1">
+	<Sheet Name="VibrationEvent" Count="1">
+		<Header>
+			<Param Name="Name" Ident="Name" Type="string" Min="" Max="" Chg="" />
+			<Param Name="Time" Ident="Time" Type="float" Min="" Max="" Chg="" />
+			<Param Name="AmplitudeMagnitude" Ident="AmplitudeMagnitude" Type="float" Min="" Max="" Chg="" />
+			<Param Name="AmpLow" Ident="AmpLow" Type="float" Min="" Max="" Chg="" />
+			<Param Name="AmpHigh" Ident="AmpHigh" Type="float" Min="" Max="" Chg="" />
+			<Param Name="FreqLow" Ident="FreqLow" Type="float" Min="" Max="" Chg="" />
+			<Param Name="FreqHigh" Ident="FreqHigh" Type="float" Min="" Max="" Chg="" />
+			<Param Name="Easing" Ident="Easing" Type="string" Min="" Max="" Chg="" />
+			<Param Name="VibrationType" Ident="VibrationType" Type="string" Min="" Max="" Chg="" />
+		</Header>
+		<Data>
+		    <!-- Battle map UI -->
+			<Param Name="DangerArea_Solo_On" Time="0.10" AmplitudeMagnitude="0.02" AmpLow="0.1" AmpHigh="0.25" FreqLow="400.0" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="DangerArea_Solo_Off" Time="0.05" AmplitudeMagnitude="0.02" AmpLow="0.1" AmpHigh="0.1" FreqLow="300.0" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="DangerArea_All_On" Time="0.10" AmplitudeMagnitude="0.02" AmpLow="0.1" AmpHigh="0.25" FreqLow="400.0" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="DangerArea_All_Off" Time="0.05" AmplitudeMagnitude="0.02" AmpLow="0.1" AmpHigh="0.1" FreqLow="300.0" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="Chara_Exchange" Time="0.25" AmplitudeMagnitude="0.20" AmpLow="0.25" AmpHigh="0.1" FreqLow="500" FreqHigh="1000" Easing="" VibrationType="UI"/>
+			<Param Name="Chara_Select" Time="0.12" AmplitudeMagnitude="0.10" AmpLow="0.12" AmpHigh="0.1" FreqLow="100" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="Ng" Time="0.12" AmplitudeMagnitude="0.10" AmpLow="0.12" AmpHigh="0.1" FreqLow="50" FreqHigh="120" Easing="" VibrationType="UI"/>
+			<Param Name="Cursor_NgMove" Time="0.12" AmplitudeMagnitude="0.10" AmpLow="0.12" AmpHigh="0.1" FreqLow="50" FreqHigh="120" Easing="" VibrationType="UI"/>
+			<Param Name="WeaponOn" Time="0.10" AmplitudeMagnitude="0.03" AmpLow="0.12" AmpHigh="0.1" FreqLow="50" FreqHigh="120" Easing="" VibrationType="UI"/>
+			<Param Name="WeaponOff" Time="0.10" AmplitudeMagnitude="0.02" AmpLow="0.05" AmpHigh="0.05" FreqLow="500" FreqHigh="700" Easing="" VibrationType="UI"/>
+			
+			<!-- Menu UI -->
+			<Param Name="Item_Deposit" Time="0.12" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="100" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="Item_Exchange" Time="0.12" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="100" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="Item_Equip_On" Time="0.12" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="100" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="Item_Equip_Off" Time="0.07" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="300" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="EquipRing_On" Time="0.12" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="100" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="EquipRing_Off" Time="0.07" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="25" FreqHigh="50" Easing="" VibrationType="UI"/>
+			
+			<Param Name="Chara_On" Time="0.12" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="100" FreqHigh="700" Easing="" VibrationType="UI"/>
+			<Param Name="Chara_Off" Time="0.07" AmplitudeMagnitude="0.05" AmpLow="0.12" AmpHigh="0.1" FreqLow="200" FreqHigh="1000" Easing="" VibrationType="UI"/>
+
+			<Param Name="SE_DLC_Summon_Orb01" Time="0.35" AmplitudeMagnitude="0.5" AmpLow="0.1" AmpHigh="0.25" FreqLow="50.0" FreqHigh="100.0" Easing="" VibrationType="UI"/>
+			<Param Name="SE_DLC_Summon_Orb02" Time="0.35" AmplitudeMagnitude="0.5" AmpLow="0.1" AmpHigh="0.25" FreqLow="100.0" FreqHigh="300.0" Easing="" VibrationType="UI"/>
+			<Param Name="SE_DLC_Summon_Orb03" Time="0.35" AmplitudeMagnitude="0.5" AmpLow="0.1" AmpHigh="0.25" FreqLow="100.0" FreqHigh="400.0" Easing="" VibrationType="UI"/>
+			<Param Name="SE_DLC_Summon_Orb04" Time="0.35" AmplitudeMagnitude="0.5" AmpLow="0.1" AmpHigh="0.25" FreqLow="100.0" FreqHigh="500.0" Easing="" VibrationType="UI"/>
+			<Param Name="ParamUp" Time="0.005" AmplitudeMagnitude="0.25" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="LevelUp_Short" Time="0.25" AmplitudeMagnitude="0.2" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="LevelUpIn" Time="0.25" AmplitudeMagnitude="0.2" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			
+			<!-- Engage related -->
+			<Param Name="UnitTouch_NotEngageOwner" Time="0.10" AmplitudeMagnitude="0.12" AmpLow="0.2" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="UnitTouch_Engaged" Time="0.10" AmplitudeMagnitude="0.20" AmpLow="0.2" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="UnitRelease_NotEngageOwner" Time="0.07" AmplitudeMagnitude="0.10" AmpLow="0.1" AmpHigh="0.0" FreqLow="50" FreqHigh="80" Easing="" VibrationType="UI"/>
+			<Param Name="UnitRelease_Engaged" Time="0.07" AmplitudeMagnitude="0.18" AmpLow="0.25" AmpHigh="0.1" FreqLow="50" FreqHigh="80" Easing="" VibrationType="UI"/>
+			
+			<Param Name="Colbalt_Engage_Ring_Flash" Time="0.30" AmplitudeMagnitude="0.50" AmpLow="0.1875" AmpHigh="0.3" FreqLow="50.0" FreqHigh="500.0" Easing="" VibrationType="UI"/>
+			<Param Name="Colbalt_Engage_Ring_Buzz" Time="0.90" AmplitudeMagnitude="0.15" AmpLow="0.15" AmpHigh="0.3" FreqLow="120.0" FreqHigh="750.0" Easing="ReverseEaseOutCubic" VibrationType="UI"/>
+			<Param Name="Cobalt_Engage_Ring_Flash_Plus_1" Time="0.50" AmplitudeMagnitude="0.50" AmpLow="0.1875" AmpHigh="0.3" FreqLow="50.0" FreqHigh="500.0" Easing="" VibrationType="UI"/>
+			<Param Name="Cobalt_Engage_Ring_Flash_Plus_2" Time="0.80" AmplitudeMagnitude="0.60" AmpLow="0.3" AmpHigh="0.3" FreqLow="250.0" FreqHigh="600.0" Easing="" VibrationType="UI"/>
+			<Param Name="Engage_Decide" Time="0.15" AmplitudeMagnitude="0.35" AmpLow="0.25" AmpHigh="0.5" FreqLow="100" FreqHigh="700" Easing="EaseInCubic" VibrationType="UI"/>
+			<Param Name="Ring_Decide" Time="0.15" AmplitudeMagnitude="0.35" AmpLow="0.25" AmpHigh="0.5" FreqLow="100" FreqHigh="700" Easing="EaseInCubic" VibrationType="UI"/>
+
+			<Param Name="Play_God_Appear" Time="0.10" AmplitudeMagnitude="0.15" AmpLow="0.12" AmpHigh="0.125" FreqLow="200" FreqHigh="300" Easing="" VibrationType="UI"/>
+			<Param Name="Play_God_Disappear" Time="0.07" AmplitudeMagnitude="0.05" AmpLow="0.07" AmpHigh="0.0" FreqLow="100" FreqHigh="200" Easing="" VibrationType="UI"/>
+			<Param Name="SE_Effect_Engage_On" Time="0.15" AmplitudeMagnitude="0.07" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+
+			<Param Name="SE_Effect_Skill_Poison_00_BMap" Time="0.1875" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="Heart_Up" Time="0.15" AmplitudeMagnitude="0.25" AmpLow="0.12" AmpHigh="0.0" FreqLow="200.0" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Bmap_ChainGuard" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="Play_Magic_Live" Time="0.20" AmplitudeMagnitude="0.15" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Magic_Bmap_RangeHeal_02" Time="0.20" AmplitudeMagnitude="0.15" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Effect_Dance_ActionAgain" Time="0.20" AmplitudeMagnitude="0.15" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+
+			<!-- Camilla abilities -->
+			<Param Name="SE_Eff_Bmap_BGType_Dirt_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Eff_Bmap_BGType_Water_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Eff_Bmap_BGType_Mist_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Eff_Bmap_BGType_Natural_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Eff_Bmap_BGType_Heal_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Eff_Bmap_BGType_Fire_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+            <Param Name="SE_Eff_Bmap_BGType_Ice_01" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+            <Param Name="SE_Eff_Bmap_BGType_Mist" Time="0.15" AmplitudeMagnitude="1.0" AmpLow="0.1875" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+            
+			<!-- Marth Engage Attack -->
+			<Param Name="Cobalt_Marth_Charging" Time="0.80" AmplitudeMagnitude="0.15" AmpLow="0.30" AmpHigh="0.25" FreqLow="60.0" FreqHigh="300.0" Easing="ReverseEaseOutCubic" VibrationType="EngageAttack"/>
+			<Param Name="Cobalt_Marth_Ding" Time="0.20" AmplitudeMagnitude="0.30" AmpLow="0.60" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_GodSkill_Marth_Dash01" Time="0.15" AmplitudeMagnitude="0.10" AmpLow="0.10" AmpHigh="0.05" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Marth_Wind01" Time="0.15" AmplitudeMagnitude="0.1" AmpLow="0.1" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<!-- Chrome Engage Skill-->
+			<Param Name="SE_DLC_Engage_Chrom_Thunder2" Time="0.50" AmplitudeMagnitude="1.0" AmpLow="0.5" AmpHigh="0.30" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Chrom_Charge" Time="0.12" AmplitudeMagnitude="0.15" AmpLow="0.3" AmpHigh="0.25" FreqLow="200" FreqHigh="300" Easing="" VibrationType="EngageAttack"/>
+			
+			
+			<Param Name="SE_DLC_Engage_Camilla_Fire2" Time="0.75" AmplitudeMagnitude="0.90" AmpLow="0.5" AmpHigh="0.5" FreqLow="30" FreqHigh="60" Easing="EaseInQuad" VibrationType="EngageAttack"/>
+			
+			<Param Name="Engage_Sigrud_Effect02" Time="1.2" AmplitudeMagnitude="0.75" AmpLow="0.2" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_Critical_Eir1AM_Sw1_EirAttack" Time="0.50" AmplitudeMagnitude="0.30" AmpLow="0.45" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			
+			<Param Name="SE_Critical_Eir1AM_Sw1_Attack" Time="0.15" AmplitudeMagnitude="0.07" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Hector_Impact1" Time="0.80" AmplitudeMagnitude="1.0" AmpLow="0.4" AmpHigh="0.90" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+		
+
+			<Param Name="Engage_Ike_Swing01" Time="0.10" AmplitudeMagnitude="0.20" AmpLow="0.25" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Ike_Catch01" Time="0.10" AmplitudeMagnitude="0.30" AmpLow="0.25" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Ike_Impact02" Time="1.40" AmplitudeMagnitude="1.2" AmpLow="0.4" AmpHigh="0.90" FreqLow="60" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+
+			<Param Name="SE_GodSkil_Cellica_Bmap" Time="0.15" AmplitudeMagnitude="0.25" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Celica_Turn" Time="0.35" AmplitudeMagnitude="0.15" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Cobalt_Engage_Cellica_Hands_Clasp" Time="0.15" AmplitudeMagnitude="0.30" AmpLow="0.1" AmpHigh="0.25" FreqLow="300" FreqHigh="600" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Cobalt_Engage_Cellica_Hands_Charge" Time="2.0" AmplitudeMagnitude="0.3" AmpLow="0.3" AmpHigh="0.3" FreqLow="" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="EngageAttack"/>
+
+			<Param Name="Engage_Micaiah_01" Time="0.25" AmplitudeMagnitude="0.3" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Micaiah_03" Time="0.85" AmplitudeMagnitude="0.3" AmpLow="0.25" AmpHigh="0.25" FreqLow="30" FreqHigh="60" Easing="" VibrationType="EngageAttack"/>
+			
+			<Param Name="SE_DLC_Engage_Senerio_Fire1" Time="0.25" AmplitudeMagnitude="0.30" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Senerio_Thunder1" Time="0.25" AmplitudeMagnitude="0.4" AmpLow="0.2" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Senerio_Wind1" Time="0.15" AmplitudeMagnitude="0.35" AmpLow="0.1" AmpHigh="0.25" FreqLow="40" FreqHigh="200" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_DLC_Engage_Senerio_Charge1" Time="0.50" AmplitudeMagnitude="0.7" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Senerio_Attack1" Time="0.50" AmplitudeMagnitude="1.5" AmpLow="0.4" AmpHigh="0.25" FreqLow="30" FreqHigh="400" Easing="" VibrationType="EngageAttack"/>
+			
+			<Param Name="Engage_Lucina_Effect01" Time="0.10" AmplitudeMagnitude="0.15" AmpLow="0.1" AmpHigh="0.25" FreqLow="400" FreqHigh="500" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Lin_Shot01" Time="0.13" AmplitudeMagnitude="0.50" AmpLow="0.45" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="Engage_Leaf_Shot" Time="0.13" AmplitudeMagnitude="0.50" AmpLow="0.45" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_Ike_Ready" Time="0.25" AmplitudeMagnitude="0.15" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Roy_Fire01" Time="0.40" AmplitudeMagnitude="1.0" AmpLow="0.5" AmpHigh="0.25" FreqLow="60" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Roy_Fire03" Time="0.25" AmplitudeMagnitude="1.0" AmpLow="0.8" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			
+			<Param Name="Engage_Byleth_Water01" Time="0.25" AmplitudeMagnitude="0.15" AmpLow="0.25" AmpHigh="0.25" FreqLow="30" FreqHigh="60" Easing="EaseInQuad" VibrationType="EngageAttack"/>
+			<Param Name="EngageSkill_Byl_00" Time="0.20" AmplitudeMagnitude="0.15" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+
+			<Param Name="SE_DLC_Engage_Thr1_Dash1" Time="0.15" AmplitudeMagnitude="0.10" AmpLow="0.10" AmpHigh="0.05" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_DLC_Engage_Thr1_Arrow_Charge1" Time="0.50" AmplitudeMagnitude="0.35" AmpLow="0.15" AmpHigh="0.15" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Thr1_Arrow_Shot1" Time="0.13" AmplitudeMagnitude="0.50" AmpLow="0.45" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_DLC_Engage_Thr2_BowCharge1" Time="0.60" AmplitudeMagnitude="0.35" AmpLow="0.15" AmpHigh="0.15" FreqLow="" FreqHigh="" Easing="ReverseEaseOutSine" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Thr2_BowShot1" Time="0.13" AmplitudeMagnitude="0.50" AmpLow="0.45" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+
+			<Param Name="SE_DLC_Summon_Rare01" Time="1.5" AmplitudeMagnitude="0.30" AmpLow="0.5" AmpHigh="0.25" FreqLow="30" FreqHigh="120" Easing="ReverseEaseOutSine" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Summon_Light_Rare0" Time="0.15" AmplitudeMagnitude="0.30" AmpLow="0.2" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_DLC_Engage_Velonica_Effect1" Time="0.15" AmplitudeMagnitude="0.07" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="SE_DLC_Engage_Velonica_Effect2" Time="0.15" AmplitudeMagnitude="0.07" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="Summon_Star01" Time="0.05" AmplitudeMagnitude="0.04" AmpLow="0.7" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Summon_Star02" Time="0.05" AmplitudeMagnitude="0.08" AmpLow="0.7" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Summon_Star03" Time="0.05" AmplitudeMagnitude="0.12" AmpLow="0.7" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Summon_Star04" Time="0.05" AmplitudeMagnitude="0.16" AmpLow="0.7" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Summon_Star05" Time="0.05" AmplitudeMagnitude="0.20" AmpLow="0.7" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_DLC_Summon_Light" Time="0.15" AmplitudeMagnitude="0.07" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="Engage_Bonds_Move_03" Time="0.07" AmplitudeMagnitude="0.20" AmpLow="0.25" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Engage_Bonds_Move_05" Time="0.30" AmplitudeMagnitude="0.30" AmpLow="0.10" AmpHigh="0.05" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+			<Param Name="Cobalt_Engage_Bonds_Shot_01" Time="1.3" AmplitudeMagnitude="1.0" AmpLow="0.35" AmpHigh="0.50" FreqLow="30" FreqHigh="500" Easing="ReverseEaseOutCubic" VibrationType="EngageAttack"/>
+
+			<Param Name="Cobalt_Engage_Beam" Time="0.9" AmplitudeMagnitude="1.5" AmpLow="1.5" AmpHigh="0.75" FreqLow="60" FreqHigh="120" Easing="EaseInQuint" VibrationType="EngageAttack"/>
+
+			<Param Name="Cobalt_Engage_Kamui_Shot" Time="0.85" AmplitudeMagnitude="1.0" AmpLow="0.35" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="EngageAttack"/>
+
+			<Param Name="SE_DLC_Telop_LinkEngage" Time="0.15" AmplitudeMagnitude="0.25" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="ItemGet" Time="0.15" AmplitudeMagnitude="0.25" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="MoneyGet" Time="0.15" AmplitudeMagnitude="0.25" AmpLow="0.1" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="UI"/>
+			<Param Name="Status_Up" Time="0.20" AmplitudeMagnitude="0.10" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="Status_Down" Time="0.20" AmplitudeMagnitude="0.10" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+			<Param Name="SE_Lin_Avatar" Time="0.07" AmplitudeMagnitude="0.10" AmpLow="0.1875" AmpHigh="0.125" FreqLow="" FreqHigh="" Easing="" VibrationType="MapSkillEffect"/>
+
+			<!-- Custom events for combat damage calculations. Do not remove. -->
+			<Param Name="Cobalt_Evasion" Time="0.1" AmplitudeMagnitude="0.5" AmpLow="0.20" AmpHigh="0.20" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+			<Param Name="Cobalt_Parry" Time="0.25" AmplitudeMagnitude="2.0" AmpLow="0.1875" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+			<Param Name="Cobalt_DamageEffectLevel_High" Time="0.5" AmplitudeMagnitude="3.0" AmpLow="0.9" AmpHigh="1.0" FreqLow="100" FreqHigh="" Easing="EaseInQuad" VibrationType="Combat"/>
+			<Param Name="Cobalt_DamageEffectLevel_Medium" Time="0.45" AmplitudeMagnitude="2.0" AmpLow="0.6" AmpHigh="0.75" FreqLow="100" FreqHigh="" Easing="EaseInQuad" VibrationType="Combat"/>
+			<Param Name="Cobalt_DamageEffectLevel_Low" Time="0.40" AmplitudeMagnitude="2.0" AmpLow="0.35" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="EaseInQuad" VibrationType="Combat"/>
+			<Param Name="Cobalt_DamageEffectLevel_CriticalBoost" Time="0.5" AmplitudeMagnitude="0.65" AmpLow="0.0" AmpHigh="0.5" FreqLow="0.0" FreqHigh="0.0" Easing="" VibrationType="Combat"/>
+			<Param Name="Cobalt_DamageEffectLevel_EngageBoost" Time="0.2" AmplitudeMagnitude="0.20" AmpLow="0.15" AmpHigh="0.25" FreqLow="0.0" FreqHigh="0.0" Easing="" VibrationType="Combat"/>
+			<Param Name="Cobalt_DamageEffectLevel_Maximums" Time="0.65" AmplitudeMagnitude="3.0" AmpLow="2.5" AmpHigh="2.5" FreqLow="0.0" FreqHigh="0.0" Easing="" VibrationType="Combat"/>
+
+			<Param Name="Cobalt_Projectile_Magic_Critical" Time="0.12" AmplitudeMagnitude="0.4" AmpLow="0.15" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+			<Param Name="Cobalt_Projectile_Magic_Normal" Time="0.10" AmplitudeMagnitude="0.2" AmpLow="0.1" AmpHigh="0.1" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+
+			<Param Name="Cobalt_Projectile_Physical_Critical" Time="0.12" AmplitudeMagnitude="0.4" AmpLow="0.10" AmpHigh="0.5" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+			<Param Name="Cobalt_Projectile_Physical_Normal" Time="0.07" AmplitudeMagnitude="0.1" AmpLow="0.15" AmpHigh="0.0" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+
+			<Param Name="Cobalt_Projectile_Rod" Time="0.20" AmplitudeMagnitude="0.2" AmpLow="0.15" AmpHigh="0.15" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+
+			<Param Name="Cobalt_Play_Magic_Nosferatu_1" Time="0.10" AmplitudeMagnitude="0.1" AmpLow="0.15" AmpHigh="0.15" FreqLow="" FreqHigh="" Easing="" VibrationType="Combat"/>
+
+			<Param Name="Cobalt_Critical_Charge" Time="0.30" AmplitudeMagnitude="0.3" AmpLow="0.30" AmpHigh="0.30" FreqLow="60" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="Combat"/>
+			<Param Name="Cobalt_SE_Critical_Veyre_Magic_01" Time="0.60" AmplitudeMagnitude="0.3" AmpLow="0.30" AmpHigh="0.30" FreqLow="60" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="Combat"/>
+			<Param Name="Cobalt_SE_Critical_Slp1EF_Mg1_Charge" Time="0.80" AmplitudeMagnitude="0.3" AmpLow="0.30" AmpHigh="0.30" FreqLow="60" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="Combat"/>
+			<Param Name="SE_Critical_Lnd1DF_Mg1_Charge" Time="0.80" AmplitudeMagnitude="0.3" AmpLow="0.30" AmpHigh="0.30" FreqLow="60" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="Combat"/>
+			<Param Name="SE_Critical_Bow1AM_Bw1_Charge" Time="0.30" AmplitudeMagnitude="0.3" AmpLow="0.30" AmpHigh="0.30" FreqLow="60" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="Combat"/>
+
+
+			<!-- Map Combat -->
+			<!-- Do not remove. -->
+			<Param Name="SE_Eff_Bmap_Bow_01" Time="0.10" AmplitudeMagnitude="0.25" AmpLow="0.15" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_BowCannon_Draw" Time="0.20" AmplitudeMagnitude="0.25" AmpLow="0.15" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_BowCannon_Release" Time="0.35" AmplitudeMagnitude="0.85" AmpLow="0.25" AmpHigh="0.25" FreqLow="60" FreqHigh="120" Easing="EaseInQuint" VibrationType="MapCombat"/>
+
+			<Param Name="SE_DLC_Cannon_Trigger_Bmap" Time="0.35" AmplitudeMagnitude="0.85" AmpLow="0.25" AmpHigh="0.25" FreqLow="60" FreqHigh="120" Easing="EaseInQuint" VibrationType="MapCombat"/>
+			
+			<Param Name="Cobalt_Map_Magiccannon_Prep" Time="0.75" AmplitudeMagnitude="0.50" AmpLow="0.35" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="ReverseEaseOutCubic" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_Magiccannon_Fire" Time="0.30" AmplitudeMagnitude="0.75" AmpLow="0.50" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="MapCombat"/>
+
+			<!-- <Param Name="SE_Eff_Bmap_BowCannon_01" Time="0.25" AmplitudeMagnitude="0.5" AmpLow="0.05" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="MapCombat"/> -->
+			<Param Name="SE_Eff_Bmap_BowCannon_02" Time="0.25" AmplitudeMagnitude="0.5" AmpLow="0.05" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="" VibrationType="MapCombat"/>
+
+			<Param Name="Cobalt_Map_DamageLevel_None" Time="0.25" AmplitudeMagnitude="0.5" AmpLow="0.05" AmpHigh="0.25" FreqLow="" FreqHigh="" Easing="EaseInQuint" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_DamageLevel_Low" Time="0.40" AmplitudeMagnitude="0.65" AmpLow="0.10" AmpHigh="0.375" FreqLow="" FreqHigh="" Easing="EaseInQuint" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_DamageLevel_Middle" Time="0.40" AmplitudeMagnitude="0.75" AmpLow="0.15" AmpHigh="0.375" FreqLow="" FreqHigh="" Easing="EaseInQuint" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_DamageLevel_High" Time="0.5" AmplitudeMagnitude="0.85" AmpLow="0.25" AmpHigh="0.625" FreqLow="" FreqHigh="" Easing="EaseInQuint" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_DamageLevel_Efficacy" Time="0.5" AmplitudeMagnitude="1.0" AmpLow="0.35" AmpHigh="0.625" FreqLow="" FreqHigh="" Easing="EaseInQuint" VibrationType="MapCombat"/>
+			<Param Name="Cobalt_Map_DamageLevel_Critical" Time="0.5" AmplitudeMagnitude="1.0" AmpLow="0.625" AmpHigh="0.75" FreqLow="" FreqHigh="" Easing="EaseInQuint" VibrationType="MapCombat"/>
+
+			<!-- Might be fun to have our own dragon roar vibrate. SE_DLC_Eff_EDragon_Voice -->
+		</Data>
+	</Sheet>
+	<Sheet Name="VibrationEventChains" Count="1">
+		<Header>
+			<Param Name="Name" Ident="Name" Type="string" Min="" Max="" Chg="" />
+			<Param Name="Chain" Ident="Chain" Type="string[]" Min="" Max="" Chg="" />
+		</Header>
+		<Data>
+			<Param Name="SE_DLC_Summon_Star03" Chain="Summon_Star01,0.300;Summon_Star02,0.600;Summon_Star03,0.900;"/>
+			<Param Name="SE_DLC_Summon_Star04" Chain="Summon_Star01,0.300;Summon_Star02,0.600;Summon_Star03,0.900;Summon_Star04,1.200;"/>
+			<Param Name="SE_DLC_Summon_Star05" Chain="Summon_Star01,0.300;Summon_Star02,0.600;Summon_Star03,0.900;Summon_Star04,1.200;Summon_Star05,1.500;"/>
+			<Param Name="SE_GodSkill_Marth_Effect01" Chain="Cobalt_Marth_Charging,0;Cobalt_Marth_Ding,0.850;"/>
+			<Param Name="Engage_Ring_Flash_Plus" Chain="Cobalt_Engage_Ring_Flash_Plus_1,0.25;Cobalt_Engage_Ring_Flash_Plus_2,2.0;"/>
+			<Param Name="Engage_Kamui_Shot01" Chain="Cobalt_Engage_Kamui_Shot,1.2;"/>
+			<Param Name="Engage_Ring_Flash" Chain="Colbalt_Engage_Ring_Flash,0;"/>
+			<Param Name="Engage_Cellica_Fire01" Chain="Cobalt_Engage_Cellica_Hands_Clasp,0;Cobalt_Engage_Cellica_Hands_Charge,0.4;"/>
+			<Param Name="Engage_Bonds_Shot_01" Chain="Cobalt_Engage_Bonds_Shot_01,0;Cobalt_Engage_Beam,1.3;"/>
+			<Param Name="SE_Eff_Cannon_Trigger_Bmap" Chain="Cobalt_Map_BowCannon_Draw,0;Cobalt_Map_BowCannon_Release,0.70;"/>
+			<Param Name="SE_Eff_Bmap_BowCannon_01" Chain="Cobalt_Map_BowCannon_Draw,0;Cobalt_Map_BowCannon_Release,0.50;"/>
+			<Param Name="SE_Effect_Magiccannon_Thunder_Shot" Chain="Cobalt_Map_Magiccannon_Prep,0;Cobalt_Map_Magiccannon_Fire,0.90;"/>
+			<Param Name="SE_Effect_Magiccannon_Fire_Shot" Chain="Cobalt_Map_Magiccannon_Prep,0;Cobalt_Map_Magiccannon_Fire,0.90;"/>
+			<Param Name="SE_Effect_Magiccannon_Wind_Shot" Chain="Cobalt_Map_Magiccannon_Prep,0;Cobalt_Map_Magiccannon_Fire,0.90;"/>
+			<Param Name="SE_Effect_Magiccannon_Nature_Shot" Chain="Cobalt_Map_Magiccannon_Prep,0;Cobalt_Map_Magiccannon_Fire,0.90;"/>
+			<Param Name="SE_Effect_Magiccannon_Obscurite_Shot" Chain="Cobalt_Map_Magiccannon_Prep,0;Cobalt_Map_Magiccannon_Fire,0.90;"/>
+		</Data>
+	</Sheet>
+</Book>

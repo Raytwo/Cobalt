@@ -1,0 +1,22 @@
+[package]
+name = "gamedata"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+skyline = { git = "https://github.com/Raytwo/skyline-rs", branch = "preview" }
+unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
+mods = { path = "../mods" }
+camino = "1.0.7"
+# Gamedata diffing
+astra_formats = { git = "https://github.com/thane98/astra-formats", default-features = false }
+astra-derive = { git = "https://github.com/thane98/Astra" }
+differ = { git = "https://github.com/Level0r0s/differ" }
+ordered-float = { version = "3.0", default-features = false }
+quick-xml = { version = "0.29.0" }
+cobalt_xml_merge = { git = "https://github.com/DivineDragonFanClub/cobalt_xml_merge", rev = "78b56e8" } # No field merging, but fast and stable
+strum = "0.25.0"
+strum_macros = "0.25.2"
+lazysimd = { git = "https://github.com/Raytwo/lazysimd" }

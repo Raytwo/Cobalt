@@ -1,0 +1,63 @@
+[package]
+name = "ozone"
+version = "0.1.0"
+edition = "2021"
+authors = ["Shadów", "blujay", "Raytwo"]
+
+[package.metadata.skyline]
+titleid = "0100A6301214E000" # Fire Emblem Engage
+custom-npdm = "packaged/exefs/main.npdm"
+package-resources = [
+    { local = "packaged/romfs/cache.json", package = "engage/cache.lut" },
+]
+
+[dependencies]
+skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
+ozone_macro = { path = "./ozone_macro" }
+cobalt = { path = "crates/cobalt" }
+updater = { path = "crates/updater" }
+gamedata = { path = "crates/gamedata" }
+loader = { path = "crates/loader" }
+mods = { path = "crates/mods" }
+unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
+engage = { version = "0.6.5", git = "https://github.com/DivineDragonFanClub/engage" }
+horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" } # We don't include the implementations because exlaunch already has them
+camino = "1.0.7"
+semver = { version = "1" }
+log = "0.4"
+multi_log = "0.1.2"
+ips = { git = "https://github.com/Nifyr/ips32" }
+
+[patch.crates-io]
+# nnsdk = { git = "https://github.com/ultimate-research/nnsdk-rs"}
+
+getrandom = { git = "https://github.com/skyline-rs/getrandom" }
+native-tls = { git = "https://github.com/skyline-rs/rust-native-tls", branch = "switch"  }
+
+[build-dependencies]
+ex-build = { path = "../ex-build" }
+
+[lib]
+crate-type = ["cdylib"]
+
+# sometimes got compile errors I can't really explain
+# these settings work for me most of the time
+[profile.dev]
+# opt-level 0 breaks sometimes for me lol. 1 less rare. 3 is also comparable in terms of compile speed, but should be slower in theory.
+opt-level = 1 
+# no idea if this breaks stuff more likely, turning it off just in case
+debug = false
+debug-assertions = false
+overflow-checks = false
+# lto-thin, reduces compile times. "off" breaks.
+lto = false
+panic = "abort"
+# faster for me, dunno if necessary, has some build errors where this was off *sometimes*.
+incremental = true
+
+[profile.release]
+opt-level = 1
+panic = "abort"
+lto = "thin"
+strip = true
+# incremental = true

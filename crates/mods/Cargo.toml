@@ -1,0 +1,17 @@
+[package]
+name = "mods"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+camino = "1.0.7"
+walkdir = "2.3.2"
+thiserror = "1.0.30"
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
+multimap = "0.9.0"
+dependency-graph = "=0.1.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9.34"
+nnsdk = { git = "https://github.com/ultimate-research/nnsdk-rs" }
