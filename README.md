@@ -42,10 +42,10 @@ The following feature(s) are planned or being worked on:
 <details>
   <summary>Ryujinx</summary>
   
-  1. Press ``File > Open Ryujinx folder`` in the menu bar at the top
+  1. Press ``File > Open Ryujinx folder`` in the menu bar at the top. Do NOT right click the game and open the Mods folder.
   2. Navigate to the ``sdcard`` folder.
   3. Extract the ``release.zip`` archive here.
-  4. Create the following directory if it doesn't already exist: ``/engage/mods/``
+  4. Create the following directory if it doesn't already exist: ``/engage/mods/``. This has to be done in the ``sdcard`` directory from step 2, NOT the ``atmosphere`` or Ryujinx mod folder.
   5. Boot game
 </details>
 
