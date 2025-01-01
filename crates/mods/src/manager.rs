@@ -18,6 +18,7 @@ pub struct ModConfig {
     pub(crate) author: String,
     #[serde(default)]
     pub(crate) dependencies: Vec<String>,
+    pub(crate) repository: Option<String>
 }
 
 pub struct ModPair {

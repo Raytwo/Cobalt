@@ -12,6 +12,7 @@ use opening::SkipOpeningSetting;
 use plugins::GlobalPluginSubmenu;
 pub mod lod;
 pub mod render_scale;
+pub mod render_scale_toggle;
 pub mod util;
 
 use self::plugins::GLOBAL_CONFIGMENUITEM_CB;

@@ -1,6 +1,6 @@
 [package]
 name = "cobalt"
-version = "1.18.0"
+version = "1.19.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
-engage = { version = "0.6.5", git = "https://github.com/DivineDragonFanClub/engage" }
+engage = { version = "0.7.0", git = "https://github.com/DivineDragonFanClub/engage" }
 mods = { path = "../mods" }
 updater = { path = "../updater" }
 localize = { git = "https://github.com/DivineDragonFanClub/localize" }

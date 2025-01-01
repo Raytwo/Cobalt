@@ -10,7 +10,7 @@ use engage::{
 use unity::prelude::*;
 
 use super::{
-    super::sequences::mainmenu::cobaltmenu::sequences::settings::{lod::LodSetting, render_scale::RenderScaleSetting},
+    super::sequences::mainmenu::cobaltmenu::sequences::settings::{lod::LodSetting, render_scale::RenderScaleSetting, render_scale_toggle::ToggleRenderScaleSetting},
     combatpopup::CombatPopupSettings,
     combatui::CombatUISettings,
     combatvibration::CombatVibrationsSettings,
@@ -63,6 +63,7 @@ impl ConfigBasicMenuItemCommandMethods for CobaltSubmenu {
                 config_menu.add_item(ConfigBasicMenuItem::new_switch::<SupportOutfitSetting>(localize::mess::get(
                     "support_outfit_item_name",
                 )));
+                config_menu.add_item(ConfigBasicMenuItem::new_switch::<ToggleRenderScaleSetting>(localize::mess::get("render_scale_toggle_name")));
                 config_menu.add_item(ConfigBasicMenuItem::new_switch::<RenderScaleSetting>(localize::mess::get(
                     "render_scale_name",
                 )));

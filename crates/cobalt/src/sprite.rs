@@ -1,17 +1,16 @@
 use std::sync::OnceLock;
 
 use engage::{
-    gamedata::{god::RingData, item::ItemData, unit::Unit, GodData},
+    gamedata::{ring::RingData, item::ItemData, unit::Unit, GodData},
     uniticon::UnitIcon,
 };
 
 use camino::Utf8PathBuf;
 use unity::{
-    prelude::*,
     engine::{
         ui::{Image, IsImage},
         Color, FilterMode, ImageConversion, Material, Rect, Sprite, SpriteMeshType, Texture2D, Vector2,
-    },
+    }, prelude::*, system::Dictionary
 };
 
 static mut SPRITE_MATERIAL: OnceLock<&'static Material> = OnceLock::new();
@@ -295,5 +294,27 @@ pub fn godcolorrefineemblem_getcolor(_this: &AppGodColorRefineEmblemO, god: &mut
             _ => call_original!(_this, god, method_info),
         },
         _ => call_original!(_this, god, method_info),
+    }
+}
+
+#[repr(C)]
+pub struct MapUIGauge<'a> {
+    _padding: [u8; 0x58],
+    m_sprites: &'a Il2CppArray<&'a mut Sprite>,
+    m_dictionary: &'a mut Dictionary<&'a Il2CppString, &'a mut Sprite>,
+}
+
+#[skyline::hook(offset = 0x201F830)]
+pub fn mapuigauge_getspritebyname(this: &MapUIGauge, name: Option<&Il2CppString>, method_info: OptionalMethod) -> &'static mut Sprite {
+    let mut result = Sprite::instantiate().unwrap();
+    if this.m_dictionary.try_get_value(name.unwrap(), &mut result) { return call_original!(this, name, method_info); }
+
+    let icon = load_sprite(name, "patches/icon/mapstatus", 64, 64, FilterMode::Point);
+    match icon {
+        Some(sprite) => {
+            this.m_dictionary.add(name.unwrap(), sprite);
+            sprite
+        },
+        None => call_original!(this, name, method_info),
     }
 }

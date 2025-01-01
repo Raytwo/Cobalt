@@ -1,12 +1,15 @@
 use unity::{engine::rendering::universal::UniversalRenderPipelineAsset, prelude::*};
 
-use crate::sequences::mainmenu::cobaltmenu::sequences::settings::render_scale::get_render_scale;
+use crate::sequences::mainmenu::cobaltmenu::sequences::settings::{render_scale::get_render_scale, render_scale_toggle};
 
 // CustomRP.Settings$$SetRenderScale	71021a8db0	void CustomRP.Settings$$SetRenderScale(float scale, MethodInfo * method)	340
 #[skyline::hook(offset = 0x21a8db0)]
-pub fn set_render_scale(scale: f32, method_info: OptionalMethod) {
-    let scale = get_render_scale().unwrap_or(scale);
-    println!("SetRenderScale: {}", scale);
+pub fn set_render_scale(mut scale: f32, method_info: OptionalMethod) {
+    if unsafe { render_scale_toggle::TOGGLE } {
+        scale = get_render_scale().unwrap_or(scale);
+        println!("SetRenderScale: {}", scale);
+    }
+    
     call_original!(scale, method_info);
 }
 

@@ -15,7 +15,9 @@ pub fn app_sound_manager_post_event(
     //     "[SoundManager::PostEvent] Event name: {}",
     //     event_name.unwrap_or("[Blank]".into()).to_string()
     // );
-    process_sound_event_name(event_name);
+    do_vibrate(|| {
+        process_sound_event_name(event_name);
+    });
     call_original!(this, event_name, character, is_get_position, method_info)
 }
 

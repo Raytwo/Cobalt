@@ -122,6 +122,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::sprite::gameicon_trygetgodring_god,
         cobalt::sprite::gameicon_trygetgodsymbol,
         cobalt::sprite::godcolorrefineemblem_getcolor,
+        cobalt::sprite::mapuigauge_getspritebyname,
         cobalt::procinst_jump,
         cobalt::graphics::render_scale::set_render_scale,
         cobalt::graphics::render_scale::set_render_scale_internal,
@@ -265,9 +266,9 @@ pub fn main() {
 
     if is_emulator() {
         loggers.push(Box::new(logger::KernelLogger));
-    } else {
-        loggers.push(Box::new(logger::TcpLogger::new()));
     }
+    
+    loggers.push(Box::new(logger::TcpLogger::new()));
 
     multi_log::MultiLogger::init(loggers, log::Level::Info).unwrap();
 

@@ -50,8 +50,8 @@
 			<Param Name="UnitRelease_NotEngageOwner" Time="0.07" AmplitudeMagnitude="0.10" AmpLow="0.1" AmpHigh="0.0" FreqLow="50" FreqHigh="80" Easing="" VibrationType="UI"/>
 			<Param Name="UnitRelease_Engaged" Time="0.07" AmplitudeMagnitude="0.18" AmpLow="0.25" AmpHigh="0.1" FreqLow="50" FreqHigh="80" Easing="" VibrationType="UI"/>
 			
-			<Param Name="Colbalt_Engage_Ring_Flash" Time="0.30" AmplitudeMagnitude="0.50" AmpLow="0.1875" AmpHigh="0.3" FreqLow="50.0" FreqHigh="500.0" Easing="" VibrationType="UI"/>
-			<Param Name="Colbalt_Engage_Ring_Buzz" Time="0.90" AmplitudeMagnitude="0.15" AmpLow="0.15" AmpHigh="0.3" FreqLow="120.0" FreqHigh="750.0" Easing="ReverseEaseOutCubic" VibrationType="UI"/>
+			<Param Name="Cobalt_Engage_Ring_Flash" Time="0.30" AmplitudeMagnitude="0.50" AmpLow="0.1875" AmpHigh="0.3" FreqLow="50.0" FreqHigh="500.0" Easing="" VibrationType="UI"/>
+			<Param Name="Cobalt_Engage_Ring_Buzz" Time="0.90" AmplitudeMagnitude="0.15" AmpLow="0.15" AmpHigh="0.3" FreqLow="120.0" FreqHigh="750.0" Easing="ReverseEaseOutCubic" VibrationType="UI"/>
 			<Param Name="Cobalt_Engage_Ring_Flash_Plus_1" Time="0.50" AmplitudeMagnitude="0.50" AmpLow="0.1875" AmpHigh="0.3" FreqLow="50.0" FreqHigh="500.0" Easing="" VibrationType="UI"/>
 			<Param Name="Cobalt_Engage_Ring_Flash_Plus_2" Time="0.80" AmplitudeMagnitude="0.60" AmpLow="0.3" AmpHigh="0.3" FreqLow="250.0" FreqHigh="600.0" Easing="" VibrationType="UI"/>
 			<Param Name="Engage_Decide" Time="0.15" AmplitudeMagnitude="0.35" AmpLow="0.25" AmpHigh="0.5" FreqLow="100" FreqHigh="700" Easing="EaseInCubic" VibrationType="UI"/>
@@ -231,7 +231,7 @@
 			<Param Name="SE_GodSkill_Marth_Effect01" Chain="Cobalt_Marth_Charging,0;Cobalt_Marth_Ding,0.850;"/>
 			<Param Name="Engage_Ring_Flash_Plus" Chain="Cobalt_Engage_Ring_Flash_Plus_1,0.25;Cobalt_Engage_Ring_Flash_Plus_2,2.0;"/>
 			<Param Name="Engage_Kamui_Shot01" Chain="Cobalt_Engage_Kamui_Shot,1.2;"/>
-			<Param Name="Engage_Ring_Flash" Chain="Colbalt_Engage_Ring_Flash,0;"/>
+			<Param Name="Engage_Ring_Flash" Chain="Cobalt_Engage_Ring_Flash,0;"/>
 			<Param Name="Engage_Cellica_Fire01" Chain="Cobalt_Engage_Cellica_Hands_Clasp,0;Cobalt_Engage_Cellica_Hands_Charge,0.4;"/>
 			<Param Name="Engage_Bonds_Shot_01" Chain="Cobalt_Engage_Bonds_Shot_01,0;Cobalt_Engage_Beam,1.3;"/>
 			<Param Name="SE_Eff_Cannon_Trigger_Bmap" Chain="Cobalt_Map_BowCannon_Draw,0;Cobalt_Map_BowCannon_Release,0.70;"/>
