@@ -16,7 +16,7 @@ astra-derive = { git = "https://github.com/thane98/Astra" }
 differ = { git = "https://github.com/Level0r0s/differ" }
 ordered-float = { version = "3.0", default-features = false }
 quick-xml = { version = "0.29.0" }
-cobalt_xml_merge = { git = "https://github.com/DivineDragonFanClub/cobalt_xml_merge", rev = "78b56e8" } # No field merging, but fast and stable
+cobalt_xml_merge = { git = "https://github.com/DivineDragonFanClub/cobalt_xml_merge", rev = "8204258" } # No field merging, but fast and stable
 strum = "0.25.0"
 strum_macros = "0.25.2"
 lazysimd = { git = "https://github.com/Raytwo/lazysimd" }

@@ -266,9 +266,9 @@ pub fn main() {
 
     if is_emulator() {
         loggers.push(Box::new(logger::KernelLogger));
+    } else {
+        loggers.push(Box::new(logger::TcpLogger::new()));
     }
-    
-    loggers.push(Box::new(logger::TcpLogger::new()));
 
     multi_log::MultiLogger::init(loggers, log::Level::Info).unwrap();
 
