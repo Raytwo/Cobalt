@@ -26,7 +26,7 @@ The following feature(s) are currently implemented:
 > Only version 2.0.0 of Fire Emblem Engage is supported.
 
 > [!TIP]
-> After installing, check your current version of Cobalt in the bottom-right corner of the Title Screen.
+> After installing, check your current version of Cobalt in the bottom-right corner of the Title Screen.  
 > If visible, you can then check the [Wiki](https://github.com/Raytwo/Cobalt/wiki) to find out how to use mods!
 
 ### Installer
