@@ -18,18 +18,23 @@ The following feature(s) are currently implemented:
 * Vibrations in combat
 * Phoenix Mode
 * Auto-update
-
-The following feature(s) are planned or being worked on:
 * Expanding memory limits (also known as the dependency IPS patches)
 * ...
-
-## Downloads  
-``GitHub``: Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.  
-``Nexus Mods``: Cobalt is also available on [Nexus Mods](https://www.nexusmods.com/fireemblemengage/mods/2), but be aware that releases might be slightly delayed there.
 
 ## Installation and usage
 > [!WARNING]
 > Only version 2.0.0 of Fire Emblem Engage is supported.
+
+> [!TIP]
+> Check the version in the bottom-right corner of the Title Screen. If you can see the version for Cobalt, you are set!  
+> You can now check the [Wiki](https://github.com/Raytwo/Cobalt/wiki) to find out about how to use mods!
+
+### Installer
+``Cobalt Installer``: Visit the [Cobalt Installer](https://github.com/DivineDragonFanClub/cobalt-installer) page to get an automatic installer for Ryujinx and/or Nintendo Switch.
+
+### Manual
+``GitHub``: Head to the [release](https://github.com/Raytwo/Cobalt/releases/latest) page to get the latest build.  
+``Nexus Mods``: Cobalt is also available on [Nexus Mods](https://www.nexusmods.com/fireemblemengage/mods/2), but be aware that releases might be slightly delayed there.
 
 <details>
   <summary>Switch</summary>
@@ -48,13 +53,6 @@ The following feature(s) are planned or being worked on:
   4. Create the following directory if it doesn't already exist: ``/engage/mods/``. This has to be done in the ``sdcard`` directory from step 2, NOT the ``atmosphere`` or Ryujinx mod folder.
   5. Boot game
 </details>
-
-> [!CAUTION]
-> Please be aware that Yuzu has received a DMCA takedown notice from Nintendo and as such will not be supported by Cobalt anymore.
-> This also goes for Suyu, and any kind of off-brand lemonade inspired name slapped over the source code of Yuzu.  
-> The instructions remain here for the time being, should you want to try using it anyways, but please do not send us bug reports if it doesn't work.  
-> They will not be addressed.
-> 
 <details>
   <summary>Yuzu (mobile unsupported, support discontinued)</summary>
 
@@ -68,9 +66,6 @@ The following feature(s) are planned or being worked on:
 
   Please note that the auto-update feature and logs are not available for the time being. No, we can not fix this.
 </details>
-
-Boot the game, make sure the Cobalt version is shown on the bottom right of the Title Scene, and you're good to go.  
-Proceed to the Wiki to find out about the [various features](https://github.com/Raytwo/Cobalt/wiki) available!
 
 ## Bug reports
 > [!IMPORTANT]
