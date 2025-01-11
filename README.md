@@ -27,7 +27,7 @@ The following feature(s) are currently implemented:
 
 > [!TIP]
 > Check the version in the bottom-right corner of the Title Screen. If you can see the version for Cobalt, you are set!  
-> You can now check the [Wiki](https://github.com/Raytwo/Cobalt/wiki) to find out about how to use mods!
+> You can now check the [Wiki](https://github.com/Raytwo/Cobalt/wiki) to find out how to use mods!
 
 ### Installer
 ``Cobalt Installer``: Visit the [Cobalt Installer](https://github.com/DivineDragonFanClub/cobalt-installer) page to get an automatic installer for Ryujinx and/or Nintendo Switch.
