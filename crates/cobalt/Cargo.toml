@@ -1,6 +1,6 @@
 [package]
 name = "cobalt"
-version = "1.20.0"
+version = "1.21.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,13 +8,14 @@ edition = "2021"
 [dependencies]
 skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
-engage = { version = "0.7.0", git = "https://github.com/DivineDragonFanClub/engage" }
+engage = { version = "0.9.0", git = "https://github.com/DivineDragonFanClub/engage" }
 mods = { path = "../mods" }
 updater = { path = "../updater" }
 localize = { git = "https://github.com/DivineDragonFanClub/localize" }
 # Catalog patching
 addressables-rs = { git = "https://github.com/Raytwo/addressables-rs", version = "0.2" }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", default-features = false }
+miniserde = { version = "0.1" }
 serde_json = "1.0"
 camino = "1.0.7"
 astra_formats = { git = "https://github.com/thane98/astra-formats", default-features = false, features = ["msbt_script"] }

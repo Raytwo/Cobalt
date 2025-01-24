@@ -5,7 +5,7 @@ use crate::sequences::mainmenu::cobaltmenu::sequences::settings::{render_scale::
 // CustomRP.Settings$$SetRenderScale	71021a8db0	void CustomRP.Settings$$SetRenderScale(float scale, MethodInfo * method)	340
 #[skyline::hook(offset = 0x21a8db0)]
 pub fn set_render_scale(mut scale: f32, method_info: OptionalMethod) {
-    if unsafe { render_scale_toggle::TOGGLE } {
+    if *render_scale_toggle::TOGGLE.read().unwrap() {
         scale = get_render_scale().unwrap_or(scale);
         println!("SetRenderScale: {}", scale);
     }

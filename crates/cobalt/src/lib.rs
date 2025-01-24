@@ -13,8 +13,9 @@ use std::{
 
 use camino::Utf8PathBuf;
 use engage::{
-    combat::{Character, CharacterGameStatus, CharacterSound},
-    gamedata::unit::Unit,
+    combat::{Character, CharacterSound},
+    gamedata::{unit::Unit, Gamedata, GodData},
+    godpool::god_pool_try_get_gid,
     mapmind::MapMind,
     proc::{ProcInst, ProcInstFields},
     sequence::mainsequence::{MainSequence, MainSequenceLabel, MainSequenceStaticFields},
@@ -817,4 +818,39 @@ pub struct AssetTableSound {
 pub struct CharacterAppearance {
     padding: [u8; 0x88],
     sound: AssetTableSound,
+}
+
+pub fn get_gid_from_ascii_name(ascii_name: &str) -> Option<&Il2CppString> {
+    GodData::get_list()?.iter()
+        .find(|data| data.get_ascii_name() == Some(ascii_name.into()))
+        .map(|data| data.gid)
+}
+
+// allows for easy remapping of engage zones in the ring polish screen by utilizing the goddata's nickname field.
+// makes it consistent with engage zone replacement in engage attacks.
+#[skyline::hook(offset = 0x232E960)]
+pub fn goddata_getengagezoneprefabpath(gid: &Il2CppString, method_info: OptionalMethod) -> &'static Il2CppString {
+    let god_data = unsafe { god_pool_try_get_gid(gid, false, method_info) };
+    match god_data {
+        Some(god) => {
+            let god_nickname = god.data.nickname.to_string();
+            let stripped_identifier = match god_nickname.split('_').nth(2) {
+                Some(identifier) => identifier,
+                None => return call_original!(gid, method_info),
+            };
+
+            match get_gid_from_ascii_name(stripped_identifier) {
+                Some(remapped_gid) => {
+                    if gid == remapped_gid {
+                        return call_original!(gid, method_info);
+                    }
+
+                    println!("[EngageZone] {} => {}", gid, remapped_gid);
+                    call_original!(remapped_gid, method_info)
+                }
+                _ => call_original!(gid, method_info),
+            }
+        },
+        None => call_original!(gid, method_info),
+    }
 }

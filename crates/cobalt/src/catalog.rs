@@ -13,7 +13,7 @@ use astra_formats::Asset;
 
 use crate::api::events::{publish_system_event, SystemEvent};
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(miniserde::Serialize, miniserde::Deserialize, Default)]
 pub struct CachedCatalogEntry {
     internal_id: String,
     container_internal_id: String,
@@ -31,13 +31,13 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
     if let Ok(dir) = manager.get_directory("Data/StreamingAssets/aa") {
 
         // Lookup Table to do the glue between modded bundles and the official Catalog
-        let lut_cache: HashMap<String, String> = serde_json::from_str(
+        let lut_cache: HashMap<String, String> = miniserde::json::from_str(
             &std::fs::read_to_string("sd:/engage/cache.lut").expect("Could not read `sd:/engage/cache.lut`, make sure to download it on Github"),
         ).unwrap();
 
         // Catalog cache of the files that exist on the SD
         let mut cache: HashMap<String, CachedCatalogEntry> = if let Ok(lut) = std::fs::read_to_string("sd:/engage/catalog.lut") {
-            serde_json::from_str(&lut).unwrap_or_default()
+            miniserde::json::from_str(&lut).unwrap_or_default()
         } else {
             HashMap::new()
         };
@@ -158,16 +158,24 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
     
                 // println!("Dependencies: {:#?}", dependencies);
                 
-                let container_internal_id = assetbundle.container_map.first().unwrap().0.to_owned();
-                let path_id = assetbundle.container_map.first().unwrap().1.asset.path_id;
+                // Grab the last entry because it better represents the type we're seeking (like Texture2D -> Sprite)
+                let (container_internal_id, assetinfo) = assetbundle.container_map.last().unwrap();
     
                 // This will supposedly help support file addition for every type of bundle more easily than checking for specific paths.
-                let asset_type = if let Some(found_asset) = asset.get_asset_by_path_id(path_id) {
+                let asset_type = if let Some(found_asset) = asset.get_asset_by_path_id(assetinfo.asset.path_id) {
                     match found_asset {
                         Asset::Texture2D(_, _) => 1,
                         Asset::Sprite(_) => 2,
                         Asset::Text(_) => 12,
                         Asset::Terrain(_) => 13,
+                        Asset::Unparsed(_) => {
+                            // We handle any type that isn't parsed by Astra-formats here
+                            match found_asset.type_hash() {
+                                // AnimationClip
+                                -80937412517696055409803870673809846754 => 36,
+                                _ => 4
+                            }
+                        },
                         _ => 4,
                     }
                 } else {
@@ -230,7 +238,7 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
         println!("Catalog patching took {}ms", timer.elapsed().as_millis());
 
         if cache_modified {
-            let out_cache = serde_json::to_string_pretty(&cache).unwrap();
+            let out_cache = miniserde::json::to_string(&cache);
             std::fs::write("sd:/engage/catalog.lut", out_cache).unwrap();
             println!("Wrote catalog cache to SD");
         }

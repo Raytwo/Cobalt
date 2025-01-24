@@ -19,7 +19,7 @@ pub enum SystemEvent {
     GamedataLoaded,
     MsbtLoaded,
     LanguageChanged,
-    SaveLoaded { slot_id: u32 },
+    SaveLoaded { ty: i32, slot_id: i32 },
     ProcInstJump { proc: &'static ProcInst, label: i32 }
 }
 
