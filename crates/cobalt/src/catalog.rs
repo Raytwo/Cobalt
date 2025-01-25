@@ -203,6 +203,7 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
                     ".png",
                     ".asset",
                     ".unity",
+                    ".fbx"
                 ];
 
                 let internal_path = suffixes.iter().fold(internal_path, |path, suffix| {
