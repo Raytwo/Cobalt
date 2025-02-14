@@ -1,17 +1,109 @@
-use std::sync::OnceLock;
+use std::{alloc::Layout, ops::{Deref, DerefMut}, sync::OnceLock};
 
 use engage::{
-    gamedata::{ring::RingData, item::ItemData, unit::Unit, GodData},
+    gamedata::{dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData},
     uniticon::UnitIcon,
 };
 
 use camino::Utf8PathBuf;
+
 use unity::{
     engine::{
         ui::{Image, IsImage},
         Color, FilterMode, ImageConversion, Material, Rect, Sprite, SpriteMeshType, Texture2D, Vector2,
     }, prelude::*, system::Dictionary
 };
+
+#[repr(i32)]
+#[derive(Debug, PartialEq)]
+
+pub enum PngResult {
+    Ok = 0,
+    Error,
+    OutOfMemory
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct Dimension {
+    width: i32,
+    height: i32
+}
+
+#[repr(C)]
+pub struct PngDecoder {
+    unk: [u8; 0x8C],
+}
+
+impl PngDecoder {
+    extern "C" fn pngdecoder_malloc(size: usize, _user_data: *const u8) -> *mut u8 {
+        if let Ok(layout) = Layout::from_size_align(size, 16) {
+            unsafe { std::alloc::alloc(layout) }
+        } else {
+            // I don't think it's wise to panic in a allocator but who knows
+            std::ptr::null_mut()
+        }
+    }
+
+    extern "C" fn pngdecoder_free(ptr: *mut u8, user_data: *const u8) {
+        // Switch's global allocator is malloc/free and therefore do not care about the Layout. I don't really see the point of this API.
+        unsafe { std::alloc::dealloc(ptr, Layout::new::<()>()) }
+    }
+
+    pub fn new() -> Self {
+        let this = Self {
+            unk: [0u8;0x8c],
+        };
+
+        unsafe { ctor(&this) }
+
+        this
+    }
+
+    pub fn initialize(&mut self) {
+        unsafe { initialize(self, Self::pngdecoder_malloc, 0 as _, Self::pngdecoder_free, 0 as _) }
+    }
+
+    pub fn set_image_data(&mut self, png: impl AsRef<[u8]>) {
+        let data = png.as_ref();
+        unsafe { set_image_data(self, data.as_ptr(), data.len()) }
+    }
+
+    pub fn analyze(&mut self) -> PngResult {
+        unsafe { analyze(self) }
+    }
+
+    pub fn get_dimension(&self) -> Dimension {
+        unsafe { get_dimension(self) }
+    }
+    
+}
+
+impl Drop for PngDecoder {
+    fn drop(&mut self) {
+        unsafe { dtor(self) }
+    }
+}
+
+extern "C" {
+    #[link_name = "_ZN2nn5image10PngDecoderC1Ev"]
+    pub fn ctor(this: &PngDecoder);
+
+    #[link_name = "_ZN2nn5image10PngDecoderD1Ev"]
+    pub fn dtor(this: &PngDecoder);
+    
+    #[link_name = "_ZN2nn5image10PngDecoder10InitializeEPFPvmS2_ES2_PFvS2_S2_ES2_"]
+    pub fn initialize(this: &PngDecoder, alloc_fn: extern "C" fn(size: usize, data: *const u8) -> *mut u8, allocate_data: *const u8, free_fn: extern "C" fn(ptr: *mut u8, data: *const u8), free_data: *const u8);
+
+    #[link_name = "_ZN2nn5image10PngDecoder12SetImageDataEPKvm"]
+    pub fn set_image_data(this: &mut PngDecoder, data: *const u8, size: usize);
+
+    #[link_name = "_ZN2nn5image10PngDecoder7AnalyzeEv"]
+    pub fn analyze(this: &mut PngDecoder) -> PngResult;
+
+    #[link_name = "_ZNK2nn5image10PngDecoder12GetDimensionEv"]
+    pub fn get_dimension(this: &PngDecoder) -> Dimension;
+}
 
 static mut SPRITE_MATERIAL: OnceLock<&'static Material> = OnceLock::new();
 
@@ -22,18 +114,33 @@ fn try_set_material(this: &mut UnitIcon) {
     }
 }
 
-fn load_sprite(name: Option<&Il2CppString>, filepath: &str, width: i32, height: i32, filter_mode: FilterMode) -> Option<&'static mut Sprite> {
+fn load_sprite(name: Option<&Il2CppString>, filepath: &str, mut width: i32, mut height: i32, filter_mode: FilterMode) -> Option<&'static mut Sprite> {
     if let Some(this) = name {
         let path = Utf8PathBuf::from(filepath)
             .join(this.to_string())
             .with_extension("png");
 
         if let Ok(file) = mods::manager::Manager::get().get_file(&path) {
-
             let array = Il2CppArray::from_slice(file).unwrap();
-            let new_texture = Texture2D::new(width, height);
 
-		    // println!("Before LoadImage");
+            let mut decoder = PngDecoder::new();
+
+            decoder.initialize();
+            decoder.set_image_data(array.fields.deref());
+
+            if PngResult::Ok == decoder.analyze() {
+                let dim = decoder.get_dimension();
+                if (width, height) != (dim.width, dim.height) {
+                    if (width, height) == (0, 0) { // WxH of 0x0 implies that it could be anything
+                        (width, height) = (dim.width, dim.height);
+                    } else {
+                        panic!("Malformed sprite file\nLocation: {}\nDimensions: {}x{} \nExpected: {}x{}\n\nResize the image to avoid stretching", path, dim.width, dim.height, width, height);
+                    }
+                }
+            }
+
+            let new_texture = Texture2D::new(width, height);
+            
             if ImageConversion::load_image(new_texture, array) {
                 new_texture.set_filter_mode(filter_mode);
 
@@ -43,7 +150,7 @@ fn load_sprite(name: Option<&Il2CppString>, filepath: &str, width: i32, height: 
 
                 return Some(Sprite::create2(new_texture, rect, pivot, 100.0, 1, SpriteMeshType::Tight));
             } else {
-                println!("Could not load icon at `{}`.\n\nMake sure it is a PNG file with a dimension of {}x{} pixels", path, width, height);
+                panic!("Could not load icon at `{}`.\n\nMake sure it is a PNG file with a dimension of {}x{} pixels", path, width, height);
             }
         }
     }
@@ -56,7 +163,8 @@ pub fn icon_destroy(this: &mut UnitIcon, method_info: OptionalMethod) {
     call_original!(this, method_info);
 }
 
-// App.GameIcon$$TyrGetUnitIconIndex
+// TODO: Investigate why load_sprite is called twice when dealing with the Unit Selection menu or highlighting the unit on a battle map
+
 // #[skyline::hook(offset = 0x227d710)]
 #[unity::hook("App", "GameIcon", "TyrGetUnitIconIndex")] // What does this even do?
 pub fn trygetuniticonindex(name: Option<&Il2CppString>, method_info: OptionalMethod) -> &'static mut Sprite {
@@ -307,14 +415,51 @@ pub struct MapUIGauge<'a> {
 #[skyline::hook(offset = 0x201F830)]
 pub fn mapuigauge_getspritebyname(this: &MapUIGauge, name: Option<&Il2CppString>, method_info: OptionalMethod) -> &'static mut Sprite {
     let mut result = Sprite::instantiate().unwrap();
-    if this.m_dictionary.try_get_value(name.unwrap(), &mut result) { return call_original!(this, name, method_info); }
+    if this.m_dictionary.try_get_value(name.unwrap(), &mut result) {
+        return call_original!(this, name, method_info);
+    }
 
-    let icon = load_sprite(name, "patches/icon/mapstatus", 64, 64, FilterMode::Point);
+    let icon = load_sprite(name, "patches/icon/mapstatus", 0, 0, FilterMode::Point);
     match icon {
         Some(sprite) => {
             this.m_dictionary.add(name.unwrap(), sprite);
             sprite
         },
         None => call_original!(this, name, method_info),
+    }
+}
+
+#[unity::class("App", "GmapMapInfoContent")]
+pub struct GmapMapInfoContent {
+    unk1: [u8; 0x18],
+    pub map_info_image: &'static mut Image,
+    unk2: [u8;0x90],
+    pub map_info_sprite: &'static Sprite,
+    // ...
+}
+
+#[unity::class("App", "GmapSpot")]
+pub struct GmapSpot { }
+
+impl GmapSpot {
+    pub fn get_chapter(&self) -> &'static mut ChapterData {
+        unsafe { gmapspot_get_chapter(self, None) }
+    }
+}
+
+#[unity::from_offset("App", "GmapSpot", "get_Chapter")]
+pub fn gmapspot_get_chapter(this: &GmapSpot, method_info: OptionalMethod) -> &'static mut ChapterData;
+
+#[unity::hook("App", "GmapMapInfoContent", "SetMapInfo")]
+pub fn gmapinfocontent_setmapinfo_hook(this: &mut GmapMapInfoContent, gmap_spot: &GmapSpot, method_info: OptionalMethod) {
+    // Call it first so the game can assign everything that is not related to the InfoThumb.
+    call_original!(this, gmap_spot, method_info);
+
+    let chapter = gmap_spot.get_chapter();
+    let prefixless_cid = chapter.get_prefixless_cid();
+
+    if let Some(infothumb) = load_sprite(Some(prefixless_cid), "patches/ui/gmap/infothumb", 468, 256, FilterMode::Trilinear) {
+        this.map_info_sprite = infothumb;
+        this.map_info_image.set_sprite(infothumb);
     }
 }

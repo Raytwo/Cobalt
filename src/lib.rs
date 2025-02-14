@@ -147,6 +147,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::gamesound_setenumparam_gameobject,
         cobalt::goddata_getengagezoneprefabpath,
         cobalt::save::gamesavedata_procread_deserialize,
+        cobalt::sprite::gmapinfocontent_setmapinfo_hook,
     );
 
     // XML Patching

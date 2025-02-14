@@ -28,7 +28,7 @@ pub struct CachedCatalogEntry {
 pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *const u8 {
     let manager = mods::manager::Manager::get();
 
-    if let Ok(dir) = manager.get_directory("Data/StreamingAssets/aa") {
+    if let Ok(dir) = manager.get_directory("Data/StreamingAssets/aa/Switch") {
 
         // Lookup Table to do the glue between modded bundles and the official Catalog
         let lut_cache: HashMap<String, String> = miniserde::json::from_str(
@@ -203,7 +203,7 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
                     ".png",
                     ".asset",
                     ".unity",
-                    ".fbx"
+                    ".fbx",
                 ];
 
                 let internal_path = suffixes.iter().fold(internal_path, |path, suffix| {
