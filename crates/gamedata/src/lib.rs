@@ -107,17 +107,16 @@ pub fn structdataarray_import(
 
 #[unity::hook("App", "Database", "Completed")]
 pub fn database_completed_hook(method_info: OptionalMethod) {
-    let mut cache = unsafe { CACHE.lock().unwrap() };
-    cache.clear();
+    CACHE.lock().unwrap().clear();
     call_original!(method_info);
 }
 
-static mut CACHE: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static CACHE: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn common_patch(data: &'static Il2CppArray<u8>, path: &Il2CppString) -> Option<&'static Il2CppArray<u8>> {
     // Check if we already have this file in the cache, instead of patching over and over
     // TODO: The cache needs to be cleared on database release, so a new hook is needed
-    let mut cache = unsafe { CACHE.lock().unwrap() };
+    let mut cache = CACHE.lock().unwrap();
 
     match cache.get(&path.to_string()) {
         Some(file) => {

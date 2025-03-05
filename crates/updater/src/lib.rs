@@ -1,5 +1,3 @@
-use std::fmt;
-
 use gh_updater::ReleaseFinderConfig;
 use semver::Version;
 use zip::ZipArchive;

@@ -1,3 +1,5 @@
+use std::sync::{LazyLock, RwLock};
+
 use engage::menu::{
     config::{ConfigBasicMenuItem, ConfigBasicMenuItemSwitchMethods},
     BasicMenuResult,
@@ -11,25 +13,28 @@ use crate::{
 
 pub const RENDER_SCALE_PATH: &str = "sd:/engage/config/render_scale";
 
+pub static CURRENT_RENDER_SCALE: LazyLock<RwLock<f32>> = LazyLock::new(|| {
+    RwLock::new(read_from_path(RENDER_SCALE_PATH).unwrap_or(0.9))
+});
+
 pub struct RenderScaleSetting;
-pub static mut CURRENT_RENDER_SCALE: f32 = 0.9;
 
 impl ConfigBasicMenuItemSwitchMethods for RenderScaleSetting {
-    fn init_content(_this: &mut ConfigBasicMenuItem) {
-        unsafe {
-            CURRENT_RENDER_SCALE = get_render_scale_with_default();
-        };
-    }
-
     extern "C" fn custom_call(this: &mut ConfigBasicMenuItem, _method_info: OptionalMethod) -> BasicMenuResult {
-        let current_scale = unsafe { CURRENT_RENDER_SCALE };
+        let mut current_scale = CURRENT_RENDER_SCALE.write().unwrap();
 
-        let result = ConfigBasicMenuItem::change_key_value_f(current_scale, 0.1, 4.0, 0.1);
+        let result = ConfigBasicMenuItem::change_key_value_f(*current_scale, 0.1, 4.0, 0.1);
 
-        if current_scale != result {
-            save_render_scale(result);
+        if *current_scale != result {
+            // Store the new scale in the RwLock then drop the guard so set_render_scale does not deadlock when trying to read the RwLock
+            *current_scale = result;
+            drop(current_scale);
+
+            write_to_path(RENDER_SCALE_PATH, &format!("{:.1}", result));
+            set_render_scale(result, None);
             Self::set_command_text(this, None);
             this.update_text();
+
             BasicMenuResult::se_cursor()
         } else {
             BasicMenuResult::new()
@@ -37,9 +42,7 @@ impl ConfigBasicMenuItemSwitchMethods for RenderScaleSetting {
     }
 
     extern "C" fn set_command_text(this: &mut ConfigBasicMenuItem, _method_info: OptionalMethod) {
-        unsafe {
-            this.command_text = format!("{:.1}", CURRENT_RENDER_SCALE).into();
-        }
+        this.command_text = format!("{:.1}", CURRENT_RENDER_SCALE.read().unwrap()).into();
     }
 
     extern "C" fn set_help_text(this: &mut ConfigBasicMenuItem, _method_info: OptionalMethod) {
@@ -47,21 +50,10 @@ impl ConfigBasicMenuItemSwitchMethods for RenderScaleSetting {
     }
 }
 
-pub fn get_render_scale() -> Option<f32> {
-    read_from_path(RENDER_SCALE_PATH)
-}
-
 pub fn get_render_scale_with_default() -> f32 {
     // TODO: Get the actual render scale from the game by reading from GameParam, instead of just assuming 0.9.
     // See App.RenderManager$$PushRenderScale
     // But it seems there are two possible values, 0.9 and 0.85? Also multiple types of render scales.
-    get_render_scale().unwrap_or(0.9)
-}
-
-pub fn save_render_scale(render_scale: f32) {
-    unsafe {
-        CURRENT_RENDER_SCALE = render_scale;
-    }
-    write_to_path(RENDER_SCALE_PATH, &format!("{:.1}", render_scale));
-    set_render_scale(render_scale, None);
+    // get_render_scale().unwrap_or(0.9)
+    0.9
 }

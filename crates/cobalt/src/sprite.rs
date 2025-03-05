@@ -1,4 +1,8 @@
-use std::{alloc::Layout, ops::{Deref, DerefMut}, sync::OnceLock};
+use std::{
+    alloc::Layout,
+    ops::Deref,
+    sync::OnceLock
+};
 
 use engage::{
     gamedata::{dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData},
@@ -45,7 +49,7 @@ impl PngDecoder {
         }
     }
 
-    extern "C" fn pngdecoder_free(ptr: *mut u8, user_data: *const u8) {
+    extern "C" fn pngdecoder_free(ptr: *mut u8, _user_data: *const u8) {
         // Switch's global allocator is malloc/free and therefore do not care about the Layout. I don't really see the point of this API.
         unsafe { std::alloc::dealloc(ptr, Layout::new::<()>()) }
     }

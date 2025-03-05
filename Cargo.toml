@@ -20,7 +20,7 @@ gamedata = { path = "crates/gamedata" }
 loader = { path = "crates/loader" }
 mods = { path = "crates/mods" }
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
-engage = { version = "0.9.0", git = "https://github.com/DivineDragonFanClub/engage" }
+engage = { version = "0.10.0", git = "https://github.com/DivineDragonFanClub/engage" }
 horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" } # We don't include the implementations because exlaunch already has them
 camino = "1.0.7"
 semver = { version = "1" }

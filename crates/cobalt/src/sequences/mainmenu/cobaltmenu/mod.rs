@@ -82,7 +82,7 @@ impl CobaltMenuSequence {
         let menu_item = BasicMenuItem::new_impl::<GlobalConfigMenuItem>();
         menu_item_list.add(menu_item);
         
-        if unsafe { *crate::updater::UPDATE_AVAILABLE.get_mut() } {
+        if crate::updater::UPDATE_AVAILABLE.load(std::sync::atomic::Ordering::Relaxed) {
             let menu_item = BasicMenuItem::new_impl::<UpdateAvailableMenuItem>();
             menu_item_list.add(menu_item);
         }
