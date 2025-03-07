@@ -28,6 +28,9 @@ impl BasicMenuItemMethods for GlobalConfigMenuItem {
         // Close the Cobalt menu when entering the settings
         this.menu.close_anime_all();
 
+        TitleBar::close_header();
+
+
         // Initialize the menu
         ConfigSequence::create_bind(this.menu);
 
