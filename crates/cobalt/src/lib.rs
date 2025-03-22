@@ -2,19 +2,11 @@
 #![feature(stmt_expr_attributes)]
 #![feature(unsafe_cell_from_mut)]
 
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    ffi::CStr,
-    sync::{LazyLock, RwLock},
-};
-
 use engage::{
     gamedata::{Gamedata, GodData},
     godpool::god_pool_try_get_gid,
     proc::{ProcInst, ProcInstFields},
 };
-use il2cpp::assembly::Il2CppImage;
 use unity::prelude::*;
 
 pub mod api;

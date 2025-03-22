@@ -1,6 +1,6 @@
 [package]
 name = "cobalt"
-version = "1.22.2"
+version = "1.23.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -23,3 +23,4 @@ gamedata = { path = "../gamedata" }
 easer = "0.3.0"
 phf = { version = "0.11", features = ["macros"] }
 lazysimd = { git = "https://github.com/Raytwo/lazysimd" }
+image = { version = "0.24.9", default-features = false, features = ["png"] }

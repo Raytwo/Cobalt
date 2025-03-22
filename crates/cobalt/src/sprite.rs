@@ -1,21 +1,18 @@
 use std::{
-    alloc::Layout,
-    ops::Deref,
-    sync::OnceLock
+    alloc::Layout, ops::Deref,
 };
 
-use engage::{
-    gamedata::{dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData},
-    uniticon::UnitIcon,
-};
+use engage::{gamedata::{dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData}, uniticon::UnitIcon};
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
+
+use image::{codecs::png::PngEncoder, ColorType, GrayImage, ImageBuffer, ImageEncoder, Luma, Pixel, Rgba, RgbaImage};
 
 use unity::{
     engine::{
         ui::{Image, IsImage},
-        Color, FilterMode, ImageConversion, Material, Rect, Sprite, SpriteMeshType, Texture2D, Vector2,
-    }, prelude::*, system::Dictionary
+        Color, FilterMode, ImageConversion, Rect, Sprite, SpriteMeshType, Texture2D, Vector2,
+    }, il2cpp::object::Array, prelude::*, system::Dictionary
 };
 
 #[repr(i32)]
@@ -109,15 +106,6 @@ extern "C" {
     pub fn get_dimension(this: &PngDecoder) -> Dimension;
 }
 
-static mut SPRITE_MATERIAL: OnceLock<&'static Material> = OnceLock::new();
-
-#[inline]
-fn try_set_material(this: &mut UnitIcon) {
-    if let Some(material) = unsafe { SPRITE_MATERIAL.get() } {
-        this.set_material(material);
-    }
-}
-
 fn load_sprite(name: Option<&Il2CppString>, filepath: &str, mut width: i32, mut height: i32, filter_mode: FilterMode) -> Option<&'static mut Sprite> {
     if let Some(this) = name {
         let path = Utf8PathBuf::from(filepath)
@@ -161,76 +149,230 @@ fn load_sprite(name: Option<&Il2CppString>, filepath: &str, mut width: i32, mut 
     None
 }
 
-#[unity::hook("App", "UnitIcon", "OnDestroy")]
-pub fn icon_destroy(this: &mut UnitIcon, method_info: OptionalMethod) {
-    try_set_material(this); // Change material to original before destroying it
-    call_original!(this, method_info);
-}
+#[unity::from_offset("UnityEngine", "Texture2D", "get_format")]
+fn texture2d_get_format(this: &Texture2D, method_info: OptionalMethod) -> i32;
 
-// TODO: Investigate why load_sprite is called twice when dealing with the Unit Selection menu or highlighting the unit on a battle map
+#[unity::hook("App", "UnitIcon", "UpdateIcon")] // What does this even do?
+pub fn uniticon_update_icon(this: &mut UnitIcon,  method_info: OptionalMethod) {
+    if let Some(index) = this.icon_name {
+        let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
 
-// #[skyline::hook(offset = 0x227d710)]
-#[unity::hook("App", "GameIcon", "TyrGetUnitIconIndex")] // What does this even do?
-pub fn trygetuniticonindex(name: Option<&Il2CppString>, method_info: OptionalMethod) -> &'static mut Sprite {
-    let icon = load_sprite(name, "patches/icon/job", 48, 48, FilterMode::Point);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(name, method_info),
+        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path) {
+            let unit_icon = image::load_from_memory_with_format(&file, image::ImageFormat::Png).unwrap().to_rgba8();
+
+            // Enforce sprite size
+            if (48, 48) != (unit_icon.width(), unit_icon.height()) {
+                panic!("Malformed sprite file\nLocation: {}\nDimensions: {}x{} \nExpected: 48x48\n\nResize the image to avoid stretching", sprite_path, unit_icon.width(), unit_icon.height());
+            }
+
+            let palette = make_palette(&unit_icon);
+
+            let palette_sprite = generate_palette_sprite(&palette);
+            let unit_sprite = generate_unit_sprite(&unit_icon, &palette);
+
+            this.pallete_sprite = Some(palette_sprite);
+            this.set_sprite(unit_sprite);
+
+            // Set the UnitIcon as dirty to refresh the material and texture and sprite
+            this
+                .get_class()
+                .get_virtual_method("SetAllDirty")
+                .map(|method| {
+                    let close_anime_all = unsafe {
+                        std::mem::transmute::<_, extern "C" fn(&UnitIcon, &MethodInfo)>(
+                            method.method_info.method_ptr,
+                        )
+                    };
+                    close_anime_all(this, method.method_info);
+                })
+                .unwrap();
+        } else {
+            call_original!(this, method_info)
+        }
+
+    } else {
+        call_original!(this, method_info);
     }
 }
 
 #[unity::hook("App", "UnitIcon", "TrySet")]
-pub fn uniticon_tryset_hook(this: &mut UnitIcon, index_name: Option<&Il2CppString>, pallete_name: Option<&Il2CppString>, method_info: OptionalMethod) -> bool {
-    let result = if let Some(index_name) = index_name {
-        // println!("Icon name: {}", index_name.to_string());
-        // println!("Pallete name: {}", pallete_name.unwrap().to_string());
+pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppString>, palette_name: Option<&Il2CppString>, method_info: OptionalMethod) -> bool {
+    if let Some(index) = index_name {
+        // Check if we have a sprite file with that name before proceeding
+        let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
 
-        let icon = load_sprite(Some(index_name), "patches/icon/job", 48, 48, FilterMode::Point);
-        match icon {
-            Some(sprite) => {
-                // Backup up the material
-                unsafe { SPRITE_MATERIAL.set(this.get_material()); }
+        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path) {
+            let unit_icon = image::load_from_memory_with_format(&file, image::ImageFormat::Png).unwrap().to_rgba8();
 
-                // Load default material first
-                this.set_material(Image::get_default_graphic_material());
-
-                // Assign the new sprite to the UnitIcon
-                this.set_sprite(sprite);
-                true
-            },
-            None => {
-                try_set_material(this);
-                call_original!(this, Some(index_name), pallete_name, method_info)
+            // Enforce sprite size
+            if (48, 48) != (unit_icon.width(), unit_icon.height()) {
+                panic!("Malformed sprite file\nLocation: {}\nDimensions: {}x{} \nExpected: 48x48\n\nResize the image to avoid stretching", sprite_path, unit_icon.width(), unit_icon.height());
             }
+            let palette = make_palette(&unit_icon);
+
+            let palette_sprite = generate_palette_sprite(&palette);
+            let unit_sprite = generate_unit_sprite(&unit_icon, &palette);
+
+            this.icon_name = index_name;
+            this.pallete_sprite = Some(palette_sprite);
+            this.set_sprite(unit_sprite);
+
+            // Set the UnitIcon as dirty to refresh the material and texture and sprite
+            this
+                .get_class()
+                .get_virtual_method("SetVerticesDirty")
+                .map(|method| {
+                    let close_anime_all = unsafe {
+                        std::mem::transmute::<_, extern "C" fn(&UnitIcon, &MethodInfo)>(
+                            method.method_info.method_ptr,
+                        )
+                    };
+                    close_anime_all(this, method.method_info);
+                })
+                .unwrap();
+
+            true
+        } else {
+            call_original!(this, index_name, palette_name, method_info)
         }
     } else {
-        // If the material was backup'd, restore it
-        try_set_material(this);
-        call_original!(this, index_name, pallete_name, method_info)
-    };
-
-    // Set the UnitIcon as dirty to refresh the material and texture and sprite
-    this
-        .get_class()
-        .get_virtual_method("SetAllDirty")
-        .map(|method| {
-            let close_anime_all = unsafe {
-                std::mem::transmute::<_, extern "C" fn(&UnitIcon, &MethodInfo)>(
-                    method.method_info.method_ptr,
-                )
-            };
-            close_anime_all(this, method.method_info);
-        })
-        .unwrap();
-    
-    result
+        call_original!(this, index_name, palette_name, method_info)
+    }
 }
 
-// #[skyline::hook(offset = 0x227d110)]
+pub fn generate_palette_sprite(palette: &RgbaImage) -> &'static mut Sprite {
+    let new_texture = Texture2D::instantiate().unwrap();
+    unsafe { texture2d_ctor2(new_texture, 512, 1, 48, false, None) };
+    new_texture.set_filter_mode(FilterMode::Point);
+    unsafe { texture2d_set_anisolevel(new_texture, 1, None) };
+
+    let mut temp = Vec::<u8>::new();
+    PngEncoder::new(&mut temp).write_image(&palette, 512, 1, ColorType::Rgba8).unwrap();
+    
+    let array = Il2CppArray::from_slice(temp).unwrap();
+    ImageConversion::load_image(new_texture, array);
+    
+    let rect = Rect::new(0.0, 0.0, 512 as f32, 1 as f32);
+    let pivot = Vector2::new(0.0, 0.0);
+    
+    Sprite::create2(new_texture, rect, pivot, 100.0, 1, SpriteMeshType::FullRect)
+}
+
+pub fn generate_unit_sprite(unit_icon: &RgbaImage, palette: &RgbaImage) -> &'static mut Sprite {
+    let r8_icon = make_r8(&unit_icon, &palette);
+    let r8_icon = image::imageops::flip_vertical(&r8_icon);
+
+    let new_texture = Texture2D::instantiate().unwrap();
+    unsafe { texture2d_ctor2(new_texture, 48, 48, 63, false, None) }
+
+    let test: Vec<u8> = r8_icon.pixels().map(|p| p.channels()[0]).collect();
+
+    let len = test.len();
+
+    let array = Il2CppArray::from_slice(test).unwrap();
+    unsafe { texture2d_set_pixel_data_impl_array(new_texture, array, 0, 1, len as i32, 0, None) };
+    new_texture.set_filter_mode(FilterMode::Point);
+    unsafe { texture2d_set_anisolevel(new_texture, 1, None) };
+    unsafe { texture2d_apply(new_texture, false, None) };
+    
+    let rect = Rect::new(0.0, 0.0, 48 as f32, 48 as f32);
+    let pivot = Vector2::new(0.5, 0.5);
+
+    Sprite::create2(new_texture, rect, pivot, 100.0, 1, SpriteMeshType::Tight)
+}
+
+#[skyline::from_offset(0x378bb90)]
+fn texture2d_ctor2(this: &Texture2D, width: i32, height: i32, format: i32, mip_chain: bool, method_info: OptionalMethod);
+
+#[unity::from_offset("UnityEngine", "Texture2D", "SetPixelDataImplArray")]
+fn texture2d_set_pixel_data_impl_array(this: &Texture2D, data: &'static mut Array<u8>, mip_level: i32, element_size: i32, data_array_size: i32, source_data_start_index: i32, method_info: OptionalMethod) -> bool;
+
+#[unity::from_offset("UnityEngine", "Texture2D", "Apply")]
+fn texture2d_apply(this: &Texture2D, update_mipmaps: bool, method_info: OptionalMethod);
+
+#[unity::from_offset("UnityEngine", "Texture", "set_anisoLevel")]
+fn texture2d_set_anisolevel(this: &Texture2D, level: i32, method_info: OptionalMethod);
+
+#[unity::from_offset("UnityEngine", "Texture2D", "GetRawTextureData")]
+fn texture2d_get_raw_texture_data(this: &Texture2D, method_info: OptionalMethod) -> &'static mut Array<u8>;
+
+#[skyline::from_offset(0x2f979a0)]
+fn sprite_get_rect(this: &Sprite, method_info: OptionalMethod) -> Rect;
+
+#[skyline::from_offset(0x2f97c40)]
+fn sprite_get_uv(this: &Sprite, method_info: OptionalMethod) -> &'static mut Array<Vector2<f32>>;
+
+#[unity::from_offset("UnityEngine", "ImageConversion", "EncodeToPNG")]
+fn imageconversion_encode_to_png(tex: &Texture2D, method_info: OptionalMethod) -> &'static mut Array<u8>;
+
+pub fn make_palette(uniticon: &RgbaImage) -> RgbaImage {
+    let mut palette = ImageBuffer::new(512, 1);
+    let mut index = 0;
+
+    let transparency_slice: &[u8; 4] = &[0, 0, 0, 0];
+    let transparency = Rgba::from_slice(transparency_slice);
+
+
+    palette.put_pixel(index*2, 0, transparency.to_owned());
+    palette.put_pixel(index*2+1, 0, transparency.to_owned());
+    
+    index += 1;
+
+    for w in 0..uniticon.width() {
+        for h in 0..uniticon.height() {
+            let pixel = uniticon.get_pixel(w, h);
+
+            let mut newcolor = true;
+
+            for x in 0..palette.width() as usize {
+                if pixel == palette.get_pixel(x as u32, 0) {
+                    newcolor = false;
+                    break;
+                }
+            }
+
+            if newcolor {
+                if index >= 256 {
+                    panic!("Palette has too many colors.");
+                }
+
+                palette.put_pixel(index*2, 0, pixel.to_owned());
+                palette.put_pixel(index*2+1, 0, pixel.to_owned());
+
+                index += 1;
+            }
+        }
+    }
+
+    palette
+}
+
+pub fn make_r8(uniticon: &RgbaImage, palette: &RgbaImage) -> GrayImage {
+    let mut r8_icon = ImageBuffer::new(uniticon.width(), uniticon.height());
+    
+    for w in 0..uniticon.width() {
+        for h in 0..uniticon.height() {
+            let pixel = uniticon.get_pixel(w, h);
+
+            for y in 0..palette.width() as usize {
+                let index = y as u8;
+                let color = palette.get_pixel(index as u32 * 2, 0);
+
+                if pixel == color {
+                    let r8_slice = [index];
+                    let r8_color = Luma::from_slice(&r8_slice);
+                    r8_icon.put_pixel(w, h, r8_color.to_owned());
+                    break;
+                }
+            }
+        }
+    }
+    
+    r8_icon
+}
+
 #[unity::hook("App", "GameIcon", "TryGetSkill")]
 pub fn get_skill_icon(name: Option<&Il2CppString>, method_info: OptionalMethod)-> &'static mut Sprite {
-	// println!("Skill Name: {}", name.unwrap().to_string());
-
     let icon = load_sprite(name, "patches/icon/skill", 56, 56, FilterMode::Trilinear);
     match icon {
         Some(sprite) => sprite,
@@ -241,8 +383,6 @@ pub fn get_skill_icon(name: Option<&Il2CppString>, method_info: OptionalMethod)-
 //#[unity::hook("App", "GameIcon", "TryGetItem")]
 #[skyline::hook(offset = 0x227cd50)]
 pub fn get_item_icon_string(iconname: Option<&Il2CppString>, method_info: OptionalMethod)-> &'static mut Sprite {
-	// println!("Item Icon: {}", iconname.unwrap().to_string());
-
     let icon = load_sprite(iconname, "patches/icon/item", 64, 64, FilterMode::Trilinear);
     match icon {
         Some(sprite) => sprite,
@@ -390,11 +530,8 @@ fn hex_to_rgba(hex: String) -> Color {
 #[skyline::from_offset(0x3530580)]
 fn colorutils_to_rgba(hex: u32) -> Color;
 
-pub struct AppGodColorRefineEmblemO {}
-
-// #[skyline::hook(offset = 0x2B51BF0)]
 #[unity::hook("App", "GodColorRefineEmblem", "GetColor")]
-pub fn godcolorrefineemblem_getcolor(_this: &AppGodColorRefineEmblemO, god: &mut GodData, method_info: OptionalMethod) -> Color {
+pub fn godcolorrefineemblem_getcolor(_this: &(), god: &mut GodData, method_info: OptionalMethod) -> Color {
     let ascii_name = god.get_ascii_name().unwrap().to_string();
     let path = Utf8PathBuf::from("patches/icon/emblem/godsymbol")
             .join(ascii_name)
@@ -410,15 +547,44 @@ pub fn godcolorrefineemblem_getcolor(_this: &AppGodColorRefineEmblemO, god: &mut
 }
 
 #[repr(C)]
+#[unity::class("", "MapUIGauge")]
 pub struct MapUIGauge<'a> {
-    _padding: [u8; 0x58],
-    m_sprites: &'a Il2CppArray<&'a mut Sprite>,
+    _padding: [u8; 0x48],
+    m_sprites: &'a mut Il2CppArray<&'a mut Sprite>,
     m_dictionary: &'a mut Dictionary<&'a Il2CppString, &'a mut Sprite>,
+}
+
+#[repr(C)]
+pub struct MapUIGaugeStaticFields {
+    pub icon_names: &'static mut Array<&'static mut Il2CppString>,
+}
+
+#[skyline::hook(offset = 0x201f8d0)]
+pub fn mapuigauge_geticonindex(this: &MapUIGauge, name: Option<&'static mut Il2CppString>, method_info: OptionalMethod) -> i32 {
+    let name = name.unwrap();
+
+    let icons = this.get_class().get_static_fields_mut::<MapUIGaugeStaticFields>();
+
+    // Check if the name of the sprite is already in the game's cache.
+    if icons.icon_names.iter().find(|icon_name| **icon_name == name).is_none() {
+        // Since our array stuff is poopoo, convert it to a Vec so we can append to it.
+        let mut temp = icons.icon_names.to_vec();
+        temp.push(name);
+
+        // Turn the Vec back into a Il2CppArray
+        icons.icon_names = Il2CppArray::from_slice(&mut temp).unwrap();
+
+        // Return the latest index we just added in stead of the original function
+        (icons.icon_names.len() - 1) as i32
+    } else {
+        call_original!(this, Some(name), method_info)
+    }    
 }
 
 #[skyline::hook(offset = 0x201F830)]
 pub fn mapuigauge_getspritebyname(this: &MapUIGauge, name: Option<&Il2CppString>, method_info: OptionalMethod) -> &'static mut Sprite {
     let mut result = Sprite::instantiate().unwrap();
+
     if this.m_dictionary.try_get_value(name.unwrap(), &mut result) {
         return call_original!(this, name, method_info);
     }
@@ -430,6 +596,32 @@ pub fn mapuigauge_getspritebyname(this: &MapUIGauge, name: Option<&Il2CppString>
             sprite
         },
         None => call_original!(this, name, method_info),
+    }
+}
+
+// TODO: Probably try to store the sprite in the Sprites array instead for speed when grabbing it again.
+#[skyline::hook(offset = 0x201f7d0)]
+pub fn mapuigauge_getspritebyindex(this: &'static mut MapUIGauge, index: usize, _method_info: OptionalMethod) -> &'static mut Sprite {
+    if index <= 0xa6 {
+        this.m_sprites[index]
+    } else {
+        // Check if the Sprite cache has already been expanded for our sprite
+        if this.m_sprites.len() - 1 < index {
+            // Grab the name of the sprite we stored in MapUIGauge::GetIconIndex
+            let icons = this.get_class().get_static_fields_mut::<MapUIGaugeStaticFields>();
+            let sprite_name = &icons.icon_names[index];
+
+            let icon = load_sprite(Some(&sprite_name), "patches/icon/mapstatus", 0, 0, FilterMode::Bilinear).expect("could not find mapuigauge status sprite despite being added in cache??");
+
+            // Since our array stuff is poopoo, convert it to a Vec so we can append to it.
+            let mut temp = this.m_sprites.to_vec();
+            temp.push(icon);
+
+            // Turn the Vec back into a Il2CppArray
+            this.m_sprites = Array::from_slice(&mut temp).unwrap();
+        }
+
+        this.m_sprites[index]
     }
 }
 

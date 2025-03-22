@@ -69,10 +69,7 @@ impl CobaltMenuSequence {
         let menu_content = unsafe { engage::menu::content::shoptopmenu::shop_top_menu_content_create(None) }.unwrap();
 
         // Create a List<BasicMenuItem> for the BasicMenu
-        let menu_item_list_class = get_generic_class!(SystemList<BasicMenuItem>).unwrap();
-        let menu_item_list = il2cpp::instantiate_class::<List<BasicMenuItem>>(&menu_item_list_class).unwrap();
-        // Create a item list with a capacity of 1
-        menu_item_list.items = Il2CppArray::new(3).unwrap();
+        let menu_item_list = List::<BasicMenuItem>::with_capacity(3).unwrap();
 
         // Create and add our button to the item list
         let menu_item = BasicMenuItem::new_impl::<ReloadXmlMenuItem>();
