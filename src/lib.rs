@@ -110,11 +110,11 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::sprite::get_skill_icon,
         cobalt::sprite::get_item_icon_string,
         cobalt::sprite::get_item_icon_itemdata,
-        // cobalt::sprite::trygetuniticonindex,
-        // cobalt::sprite::trygetunitpaletteindex,
         cobalt::sprite::uniticon_try_set,
         cobalt::sprite::uniticon_update_icon,
-        // cobalt::sprite::uniticon_tryset_hook,
+        cobalt::sprite::mapuigauge_cctor,
+        cobalt::sprite::mapuigauge_onenable,
+        cobalt::sprite::mapuigauge_getspritebyindex,
         cobalt::sprite::facethumb_get_unit,
         cobalt::sprite::facethumb_get_god,
         cobalt::sprite::facethumb_get_ring,
@@ -124,10 +124,8 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::sprite::gameicon_trygetgodring_god,
         cobalt::sprite::gameicon_trygetgodsymbol,
         cobalt::sprite::godcolorrefineemblem_getcolor,
-        cobalt::sprite::mapuigauge_getspritebyname,
-        cobalt::sprite::mapuigauge_getspritebyindex,
-        cobalt::sprite::mapuigauge_geticonindex,
         cobalt::procinst_jump,
+        cobalt::proc_inst_create_bind,
         cobalt::graphics::render_scale::set_render_scale,
         cobalt::graphics::render_scale::set_render_scale_internal,
         cobalt::graphics::lod::lod_hook,
@@ -223,7 +221,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
 
     cobalt::api::events::cobapi_register_system_event_listener(cobalt::sequences::titleloop::grand_opening_skip);
     cobalt::api::events::cobapi_register_system_event_listener(cobalt::updater::catalog_mount_update_check);
-
+    cobalt::api::events::cobapi_register_system_event_listener(cobalt::sprite::add_default_sprites);
     res
 }
 

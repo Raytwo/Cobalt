@@ -1,7 +1,8 @@
+use std::cell::RefCell;
 use std::sync::{
     LazyLock, RwLock
 };
-
+use engage::proc::desc::ProcDesc;
 use engage::proc::ProcInst;
 
 mod event;
@@ -20,7 +21,11 @@ pub enum SystemEvent {
     MsbtLoaded,
     LanguageChanged,
     SaveLoaded { ty: i32, slot_id: i32 },
-    ProcInstJump { proc: &'static ProcInst, label: i32 }
+    ProcInstJump { proc: &'static ProcInst, label: i32 },
+    ProcInstBind {
+        proc: RefCell<&'static mut ProcInst>,
+        parent: RefCell<Option<&'static mut ProcInst>>,
+    },
 }
 
 #[repr(C)]

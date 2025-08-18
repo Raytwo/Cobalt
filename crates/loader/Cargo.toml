@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1.0.30"
-skyline = { git = "https://github.com/Raytwo/skyline-rs", branch = "preview" }
+skyline = "0.5.1"
 horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" }

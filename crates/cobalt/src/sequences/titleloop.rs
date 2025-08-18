@@ -7,7 +7,7 @@ use engage::{
 
 use crate::api::events::{Event, SystemEvent};
 
-const TITLELOOPSEQUENCE_HASHCODE: i32 = -988690862;
+pub const TITLELOOPSEQUENCE_HASHCODE: i32 = -988690862;
 
 pub extern "C" fn grand_opening_skip(evt: &Event<SystemEvent>) {
     if let Event::Args(ev) = evt {

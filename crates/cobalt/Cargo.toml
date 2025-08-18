@@ -1,12 +1,12 @@
 [package]
 name = "cobalt"
-version = "1.23.0"
+version = "1.25.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
+skyline = "0.5.1"
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
 engage = { version = "0.10.0", git = "https://github.com/DivineDragonFanClub/engage" }
 mods = { path = "../mods" }
@@ -24,3 +24,4 @@ easer = "0.3.0"
 phf = { version = "0.11", features = ["macros"] }
 lazysimd = { git = "https://github.com/Raytwo/lazysimd" }
 image = { version = "0.24.9", default-features = false, features = ["png"] }
+

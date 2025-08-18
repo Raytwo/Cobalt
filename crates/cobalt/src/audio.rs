@@ -153,7 +153,7 @@ pub struct FileCommon {}
 #[repr(C)]
 pub struct FileCommonStaticFields<'a> {
     lock_object: &'a (),
-    dictionary: &'a Dictionary<&'a Il2CppString, &'a mut FileData>,
+    dictionary: &'a Dictionary<'a, &'a Il2CppString, &'a mut FileData>,
     // Meh
 }
 

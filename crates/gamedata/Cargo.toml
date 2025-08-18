@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-skyline = { git = "https://github.com/Raytwo/skyline-rs", branch = "preview" }
+skyline = "0.5.1"
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
+
 mods = { path = "../mods" }
 camino = "1.0.7"
 # Gamedata diffing
@@ -20,3 +21,5 @@ cobalt_xml_merge = { git = "https://github.com/DivineDragonFanClub/cobalt_xml_me
 strum = "0.25.0"
 strum_macros = "0.25.2"
 lazysimd = { git = "https://github.com/Raytwo/lazysimd" }
+
+

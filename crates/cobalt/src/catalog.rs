@@ -167,11 +167,11 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
                         Asset::Sprite(_) => 2,
                         Asset::Text(_) => 12,
                         Asset::Terrain(_) => 13,
+                        Asset::AnimationClip(_) => 36,
+                        Asset::AnimatorOverrideController(_) => 47,
                         Asset::Unparsed(_) => {
                             // We handle any type that isn't parsed by Astra-formats here
                             match found_asset.type_hash() {
-                                // AnimationClip
-                                -80937412517696055409803870673809846754 => 36,
                                 _ => 4
                             }
                         },
@@ -203,6 +203,7 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
                     ".asset",
                     ".unity",
                     ".fbx",
+                    ".overrideController"
                 ];
 
                 let internal_path = suffixes.iter().fold(internal_path, |path, suffix| {

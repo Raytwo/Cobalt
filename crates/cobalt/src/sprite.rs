@@ -1,11 +1,11 @@
 use std::{
     alloc::Layout, ops::Deref,
 };
+use std::collections::HashSet;
+use engage::{gamedata::{Gamedata, PersonData, JobData, dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData}, uniticon::UnitIcon, gameicon::GameIcon};
 
-use engage::{gamedata::{dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData}, uniticon::UnitIcon};
-
-use camino::{Utf8Path, Utf8PathBuf};
-
+use camino::Utf8PathBuf;
+use engage::gameicon::GameIconStaticFields;
 use image::{codecs::png::PngEncoder, ColorType, GrayImage, ImageBuffer, ImageEncoder, Luma, Pixel, Rgba, RgbaImage};
 
 use unity::{
@@ -14,6 +14,7 @@ use unity::{
         Color, FilterMode, ImageConversion, Rect, Sprite, SpriteMeshType, Texture2D, Vector2,
     }, il2cpp::object::Array, prelude::*, system::Dictionary
 };
+use crate::api::events::SystemEvent;
 
 #[repr(i32)]
 #[derive(Debug, PartialEq)]
@@ -196,7 +197,7 @@ pub fn uniticon_update_icon(this: &mut UnitIcon,  method_info: OptionalMethod) {
 }
 
 #[unity::hook("App", "UnitIcon", "TrySet")]
-pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppString>, palette_name: Option<&Il2CppString>, method_info: OptionalMethod) -> bool {
+pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppString>, palette_name: Option<&'static Il2CppString>, method_info: OptionalMethod) -> bool {
     if let Some(index) = index_name {
         // Check if we have a sprite file with that name before proceeding
         let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
@@ -233,10 +234,21 @@ pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppS
 
             true
         } else {
-            call_original!(this, index_name, palette_name, method_info)
+            if GameIcon::try_get_unit_icon_index(index).is_some() {
+                call_original!(this, index_name, palette_name, method_info)
+            }
+            else {
+                call_original!(this, palette_name, palette_name, method_info)
+            }
         }
     } else {
-        call_original!(this, index_name, palette_name, method_info)
+        if palette_name.is_some() {
+            call_original!(this, palette_name, palette_name, method_info)
+        }
+        else {
+            call_original!(this, index_name, palette_name, method_info)
+        }
+
     }
 }
 
@@ -549,9 +561,11 @@ pub fn godcolorrefineemblem_getcolor(_this: &(), god: &mut GodData, method_info:
 #[repr(C)]
 #[unity::class("", "MapUIGauge")]
 pub struct MapUIGauge<'a> {
-    _padding: [u8; 0x48],
-    m_sprites: &'a mut Il2CppArray<&'a mut Sprite>,
-    m_dictionary: &'a mut Dictionary<&'a Il2CppString, &'a mut Sprite>,
+    _padding: [u8; 0x38],
+    m_spriteatlas: &'a mut SpriteAtlas,
+    wait_frame_after_event: i32,
+    m_sprites: Option<&'a mut Il2CppArray<Option<&'a mut Sprite>>>,
+    m_dictionary: &'a mut Dictionary<'a, &'a Il2CppString, Option<&'a mut Sprite>>,
 }
 
 #[repr(C)]
@@ -559,69 +573,73 @@ pub struct MapUIGaugeStaticFields {
     pub icon_names: &'static mut Array<&'static mut Il2CppString>,
 }
 
-#[skyline::hook(offset = 0x201f8d0)]
-pub fn mapuigauge_geticonindex(this: &MapUIGauge, name: Option<&'static mut Il2CppString>, method_info: OptionalMethod) -> i32 {
-    let name = name.unwrap();
-
-    let icons = this.get_class().get_static_fields_mut::<MapUIGaugeStaticFields>();
-
-    // Check if the name of the sprite is already in the game's cache.
-    if icons.icon_names.iter().find(|icon_name| **icon_name == name).is_none() {
-        // Since our array stuff is poopoo, convert it to a Vec so we can append to it.
-        let mut temp = icons.icon_names.to_vec();
-        temp.push(name);
-
-        // Turn the Vec back into a Il2CppArray
-        icons.icon_names = Il2CppArray::from_slice(&mut temp).unwrap();
-
-        // Return the latest index we just added in stead of the original function
-        (icons.icon_names.len() - 1) as i32
-    } else {
-        call_original!(this, Some(name), method_info)
-    }    
-}
-
-#[skyline::hook(offset = 0x201F830)]
-pub fn mapuigauge_getspritebyname(this: &MapUIGauge, name: Option<&Il2CppString>, method_info: OptionalMethod) -> &'static mut Sprite {
-    let mut result = Sprite::instantiate().unwrap();
-
-    if this.m_dictionary.try_get_value(name.unwrap(), &mut result) {
-        return call_original!(this, name, method_info);
-    }
-
-    let icon = load_sprite(name, "patches/icon/mapstatus", 0, 0, FilterMode::Point);
-    match icon {
-        Some(sprite) => {
-            this.m_dictionary.add(name.unwrap(), sprite);
-            sprite
-        },
-        None => call_original!(this, name, method_info),
-    }
-}
-
 // TODO: Probably try to store the sprite in the Sprites array instead for speed when grabbing it again.
 #[skyline::hook(offset = 0x201f7d0)]
 pub fn mapuigauge_getspritebyindex(this: &'static mut MapUIGauge, index: usize, _method_info: OptionalMethod) -> &'static mut Sprite {
-    if index <= 0xa6 {
-        this.m_sprites[index]
-    } else {
-        // Check if the Sprite cache has already been expanded for our sprite
-        if this.m_sprites.len() - 1 < index {
-            // Grab the name of the sprite we stored in MapUIGauge::GetIconIndex
-            let icons = this.get_class().get_static_fields_mut::<MapUIGaugeStaticFields>();
-            let sprite_name = &icons.icon_names[index];
+    match this.m_sprites.as_mut().unwrap().get_mut(index) {
+        Some(sprite) => match sprite {
+            Some(sprite) => sprite,
+            None => Sprite::instantiate().unwrap(),
+        },
+        None => Sprite::instantiate().unwrap(),
+    }
+}
 
-            let icon = load_sprite(Some(&sprite_name), "patches/icon/mapstatus", 0, 0, FilterMode::Bilinear).expect("could not find mapuigauge status sprite despite being added in cache??");
+#[skyline::hook(offset = 0x2026630)]
+pub fn mapuigauge_cctor(method_info: OptionalMethod) {
+    call_original!(method_info);
 
-            // Since our array stuff is poopoo, convert it to a Vec so we can append to it.
-            let mut temp = this.m_sprites.to_vec();
-            temp.push(icon);
+    let icons = MapUIGauge::class().get_static_fields_mut::<MapUIGaugeStaticFields>();
 
-            // Turn the Vec back into a Il2CppArray
-            this.m_sprites = Array::from_slice(&mut temp).unwrap();
+    if let Ok(dir) = mods::manager::Manager::get().get_directory("patches/icon/mapstatus") {
+        if let Ok(paths) = mods::manager::Manager::get().get_files_in_directory(dir) {
+            for path in paths {
+                if path.extension() == Some("png") {
+                    let mut names = icons.icon_names.to_vec();
+
+                    let filename = path.file_stem().unwrap().into();
+                    if !names.contains(&filename) {
+                        names.push(filename);
+                    }
+                    // Turn the Vec back into a Il2CppArray
+                    icons.icon_names = Il2CppArray::from_slice(&mut names).unwrap();
+                }
+            }
         }
+    }
+}
 
-        this.m_sprites[index]
+#[repr(C)]
+#[unity::class("UnityEngine.U2D", "SpriteAtlas")]
+pub struct SpriteAtlas { }
+
+#[skyline::from_offset(0x2f98dc0)]
+pub fn spriteatlas_get_sprite(this: &mut SpriteAtlas, name: &'static Il2CppString, method_info: OptionalMethod) -> Option<&'static mut Sprite>;
+
+#[skyline::hook(offset = 0x201f3d0)]
+pub fn mapuigauge_onenable(this: &'static mut MapUIGauge, _method_info: OptionalMethod) {
+    let icons = MapUIGauge::class().get_static_fields_mut::<MapUIGaugeStaticFields>();
+
+    if this.m_sprites.is_none() {
+        let mut temp_sprite = Vec::with_capacity(icons.icon_names.len());
+
+        icons.icon_names.iter().enumerate().for_each(|(idx, name)| {
+            // Load from SpriteAtlas if within the original array length
+            let icon = if idx < 0xA7 {
+                let icon = unsafe { spriteatlas_get_sprite(this.m_spriteatlas, name, None) };
+                temp_sprite.push(icon);
+                unsafe { spriteatlas_get_sprite(this.m_spriteatlas, name, None) }
+            } else {
+                let icon = load_sprite(Some(name), "patches/icon/mapstatus", 0, 0, FilterMode::Bilinear);
+                temp_sprite.push(icon);
+                // Yeaaaaaaaaah... Lifetimes, son.
+                load_sprite(Some(name), "patches/icon/mapstatus", 0, 0, FilterMode::Bilinear)
+            };
+
+            this.m_dictionary.add(&name, icon);
+        });
+
+        this.m_sprites = Array::from_slice(&mut temp_sprite).ok();
     }
 }
 
@@ -657,5 +675,90 @@ pub fn gmapinfocontent_setmapinfo_hook(this: &mut GmapMapInfoContent, gmap_spot:
     if let Some(infothumb) = load_sprite(Some(prefixless_cid), "patches/ui/gmap/infothumb", 468, 256, FilterMode::Trilinear) {
         this.map_info_sprite = infothumb;
         this.map_info_image.set_sprite(infothumb);
+    }
+}
+
+pub fn add_in_default_sprites() {
+    let game_icon_static_fields = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
+    let palettes =
+        game_icon_static_fields.unit_icon_pallete.cache_table.entries.iter().filter(|i| i.key.is_some())
+            .map(|c| c.key.unwrap().to_string()).collect::<Vec<String>>();
+
+    let mut key_sprite_pair =
+        game_icon_static_fields.unit_icon_index.cache_table.entries.iter().filter(|c| c.key.is_some_and(|c| c.to_string().contains("NoWeapon")))
+            .map(|c| { (c.key.unwrap().to_string(), c.value) }).collect::<Vec<_>>();
+    let mut count = 0;
+
+    // For Sprites that have the same UnitIcon and JobIcon String: 556Marth_556Marth_NoWeapon
+    palettes.iter()
+        .filter(|x| GameIcon::try_get_unit_icon_index(x.as_str()).is_none() && GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", x, x)).is_some())
+        .for_each(|emblem|{
+            if let Some(emblem_sprite) = GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", emblem, emblem)){
+                count += 1;
+                game_icon_static_fields.unit_icon_index.cache_table.add(emblem.into(), emblem_sprite);
+            }
+        });
+    // Unique Classes that only has a few UnitIcon: 001Lueur_600DragonLord / 051Lueur_601DragonLord
+    JobData::get_list().unwrap().iter().filter(|j| j.unit_icon_id_f.is_some() || j.unit_icon_id_m.is_some() )
+        .for_each(|j|{
+            for job_icon in [j.unit_icon_id_f, j.unit_icon_id_m] {
+                if let Some(icon) = job_icon.map(|icon| icon.to_string()) {
+                    let sprites = key_sprite_pair.iter()
+                        .filter(|x| x.0.contains(icon.as_str())).collect::<Vec<_>>();
+
+                    if sprites.len() > 0 && sprites.len() < 5 { // Unique jobs probably have less than 5 total NoWeapon Sprites
+                        palettes.iter()
+                            .filter(|x|
+                                sprites.iter().any(|sprite|
+                                    sprite.0.contains(x.as_str())
+                                ) && GameIcon::try_get_unit_icon_index(x.as_str()).is_none()
+                            ).for_each(|palette|{
+                            if let Some(sprite) = sprites.iter()
+                                .find(|sprite| sprite.0.contains(palette.as_str()))
+                            {
+                                count += 1;
+                                game_icon_static_fields.unit_icon_index.cache_table.add(palette.into(), sprite.1);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+
+    let set = PersonData::get_list().unwrap().iter()
+        .filter(|x| x.unit_icon_id.is_some() && x.get_job().is_some())
+        .map(|x| (x.unit_icon_id.unwrap().to_string(), x.get_job().unwrap().parent.hash))
+        .collect::<HashSet<_>>();
+
+    palettes.iter()
+        .filter(|x| GameIcon::try_get_unit_icon_index(x.as_str()).is_none() )
+        .for_each(|palette| {
+            if let Some(job) = set.iter().find(|x| x.0 == *palette).and_then(|x| JobData::try_get_hash(x.1)) {
+                for job_icon in [job.unit_icon_id_f, job.unit_icon_id_m] {
+                    if let Some(icon) = job_icon.map(|icon| icon.to_string()) {
+                        if let Some((pos, sprite)) = key_sprite_pair.iter()
+                            .enumerate().find(|(_, x)| x.0.contains(icon.as_str()) && x.0.contains(palette.as_str()))
+                        {
+                            if GameIcon::try_get_unit_icon_index(palette.as_str()).is_none() {
+                                count += 1;
+                                game_icon_static_fields.unit_icon_index.cache_table.add(palette.into(), sprite.1);
+                                key_sprite_pair.remove(pos);
+                            }
+
+                        }
+                    }
+                }
+            }
+        });
+    println!("Added {} Default Sprites", count);
+}
+
+pub extern "C" fn add_default_sprites(evt: &crate::api::events::Event<SystemEvent>) {
+    if let crate::api::events::Event::Args(ev) = evt {
+        if let SystemEvent::ProcInstJump { proc, .. } = ev {
+            if proc.hashcode == crate::sequences::titleloop::TITLELOOPSEQUENCE_HASHCODE {
+                add_in_default_sprites();
+            }
+        }
     }
 }

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
+skyline = "0.5.1"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 gh-updater = { git = "https://github.com/blu-dev/gh-updater", default-features = false, features = ["native-tls"] }
 semver = { version = "1", features = ["serde"] }

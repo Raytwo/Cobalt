@@ -2,11 +2,13 @@
 #![feature(stmt_expr_attributes)]
 #![feature(unsafe_cell_from_mut)]
 
+use std::cell::RefCell;
 use engage::{
     gamedata::{Gamedata, GodData},
     godpool::god_pool_try_get_gid,
     proc::{ProcInst, ProcInstFields},
 };
+use engage::proc::desc::ProcDesc;
 use unity::prelude::*;
 
 pub mod api;
@@ -55,6 +57,33 @@ pub fn procinst_jump(this: &'static ProcInst, label: &i32, method_info: Optional
     });
 
     call_original!(this, label, method_info)
+}
+#[skyline::from_offset(0x0281e4d0)]
+pub fn proc_inst_create_internal(
+    this: &ProcInst,
+    parent: Option<&ProcInst>,
+    desc: &Il2CppArray<&ProcDesc>,
+    name: Option<&Il2CppString>,
+    is_bind: bool,
+    method_info: OptionalMethod) -> &'static ProcInst;
+
+#[skyline::hook(offset=0x280a6b0)]
+pub fn proc_inst_create_bind(
+    this: &'static mut ProcInst,
+    parent: Option<&'static mut ProcInst>,
+    desc: &'static Il2CppArray<&'static ProcDesc>,
+    name: Option<&Il2CppString>,
+    method_info: OptionalMethod) -> &'static ProcInst
+{
+    let proc =
+    unsafe {
+        proc_inst_create_internal(this, parent.as_deref(), desc, name, true, method_info)
+    };
+    crate::api::events::publish_system_event(api::events::SystemEvent::ProcInstBind {
+        proc: RefCell::new(this),
+        parent: RefCell::new(parent)
+    });
+    proc
 }
 
 #[skyline::from_offset(0x429cc8)]

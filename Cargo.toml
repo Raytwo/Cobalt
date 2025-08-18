@@ -12,7 +12,7 @@ package-resources = [
 ]
 
 [dependencies]
-skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
+skyline = "0.5.1"
 ozone_macro = { path = "./ozone_macro" }
 cobalt = { path = "crates/cobalt" }
 updater = { path = "crates/updater" }
