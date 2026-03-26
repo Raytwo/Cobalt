@@ -47,15 +47,18 @@ impl XmlReloadSequence {
         
             database_release(None);
             database_load(None);
+            println!("Release and load took {}ms", reload.elapsed().as_millis());
 
-            println!("Reload took {}ms", reload.elapsed().as_millis());
         }
     }
 
     pub extern "C" fn reload_complete(_parent: &mut impl Bindable, _method_info: OptionalMethod) {
         unsafe {
+            let reload = std::time::Instant::now();
+
             database_completed(None);
-            
+            println!("Completed took {}ms", reload.elapsed().as_millis());
+
         }
     }
 
@@ -72,10 +75,11 @@ impl MenuSequence for XmlReloadSequence {
             Fade::black_out(0.5, 4),
             ProcDesc::wait_time(0.5),
             // Set vsync to Slow
-            // descs.push(unsafe { proc_vsync(1, None) });
+            Proc::vsync(1),
             ProcDesc::call(ProcVoidMethod::new(None, Self::enable_boost_mode)),
-            // Loop until the resources are loaded
             ProcDesc::call(ProcVoidMethod::new(this, Self::reload)),
+            // Loop until the resources are loaded
+            Proc::wait_is_loading(),
             ProcDesc::call(ProcVoidMethod::new(this, Self::reload_complete)),
             ProcDesc::call(ProcVoidMethod::new(None, Self::disable_boost_mode)),
             // Restore vsync to Normal

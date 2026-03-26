@@ -1,20 +1,22 @@
 use unity::prelude::*;
-use engage::{eventsequence::EventSequence, proc::ProcInst, script::*};
+use engage::{eventsequence::{eventsequence_addcoroutine}, proc::ProcInst, script::*};
 
 use crate::api::lua::ScriptCobalt;
 
 #[unity::hook("App", "ScriptSystem", "Log")]
-pub fn scriptsystem_log(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+pub fn scriptsystem_log(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
 
     if let Some(string) = args.try_get_string(0) {
         println!("ScriptSystem::Log: {}", string.to_string());
     }
 }
 
-#[unity::hook("App", "HubSequence", "MapOpeningEvent")]
-pub fn hubsequence_mapopeningevent_hook(this: &ProcInst, method_info: OptionalMethod) {
+#[unity::hook("App", "EventSequence", "MapOpening")]
+pub fn eventsequence_mapopening_hook(parent: &'static ProcInst, method_info: OptionalMethod) {
     // println!("App.HubSequence::MapOpeningEvent");
-    
+
+    call_original!(parent, method_info);
+
     // Only run custom lua files in the Hub until Dragon's Gate is ready
     if engage::gameuserdata::GameUserData::get_sequence() == 4 {
         println!("Reading custom lua");
@@ -36,14 +38,12 @@ pub fn hubsequence_mapopeningevent_hook(this: &ProcInst, method_info: OptionalMe
                     let stream = MemoryStream::instantiate().unwrap();
                     system_io_memorystream_ctor(stream, array, None);
                     moonsharp_interpreter_script_dostream(instance, stream, 0 as _, 0 as _, None);
-                    let func =
-                        moonsharp_interpreter_table_get(instance.global_table, lua_path.file_stem().unwrap().into(), None);
-                    EventSequence::try_create_bind(this, func, None, None, None);
+                    let func = moonsharp_interpreter_table_get(instance.global_table, lua_path.file_stem().unwrap().into(), None);
+                    eventsequence_addcoroutine(parent.get_child(), func, 0 as _, None);
                 })
         }
     }
 
-    call_original!(this, method_info);
 }
 
 #[unity::from_offset("App", "EventScript", "Load")]

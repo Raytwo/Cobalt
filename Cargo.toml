@@ -12,7 +12,7 @@ package-resources = [
 ]
 
 [dependencies]
-skyline = "0.5.1"
+skyline = "0.6"
 ozone_macro = { path = "./ozone_macro" }
 cobalt = { path = "crates/cobalt" }
 updater = { path = "crates/updater" }
@@ -20,7 +20,7 @@ gamedata = { path = "crates/gamedata" }
 loader = { path = "crates/loader" }
 mods = { path = "crates/mods" }
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
-engage = { version = "0.10.0", git = "https://github.com/DivineDragonFanClub/engage" }
+engage = { git = "https://github.com/DivineDragonFanClub/engage" }
 horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" } # We don't include the implementations because exlaunch already has them
 camino = "1.0.7"
 semver = { version = "1" }
@@ -29,8 +29,6 @@ multi_log = "0.1.2"
 ips = { git = "https://github.com/Nifyr/ips32" }
 
 [patch.crates-io]
-# nnsdk = { git = "https://github.com/ultimate-research/nnsdk-rs"}
-
 getrandom = { git = "https://github.com/skyline-rs/getrandom" }
 native-tls = { git = "https://github.com/skyline-rs/rust-native-tls", branch = "switch"  }
 

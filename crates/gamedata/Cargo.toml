@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-skyline = "0.5.1"
+skyline = "0.6"
 unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
 
 mods = { path = "../mods" }

@@ -45,8 +45,13 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
 
         // Timer for the process of parsing the catalog, appending the new entries and writing it back
         let timer = std::time::Instant::now();
+        let mut json = json.to_vec();
 
-        let mut catalog = Catalog::from_str(json.to_string()).unwrap();
+        println!("json to vec took {}ms", timer.elapsed().as_millis());
+
+        let mut catalog = Catalog::from_slice(json.as_mut_slice()).unwrap();
+        println!("slice to catalog took {}ms", timer.elapsed().as_millis());
+
 
         // Copy the ExtraId here once and for all, since there is no need for us to make our own for every file.
         let extra = catalog.get_extra(ExtraId(200)).expect("Couldn't get ExtraId").to_owned();
@@ -169,6 +174,7 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
                         Asset::Terrain(_) => 13,
                         Asset::AnimationClip(_) => 36,
                         Asset::AnimatorOverrideController(_) => 47,
+                        Asset::SpriteAtlas(_) => 7,
                         Asset::Unparsed(_) => {
                             // We handle any type that isn't parsed by Astra-formats here
                             match found_asset.type_hash() {
@@ -203,7 +209,8 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
                     ".asset",
                     ".unity",
                     ".fbx",
-                    ".overrideController"
+                    ".overrideController",
+                    ".spriteatlas"
                 ];
 
                 let internal_path = suffixes.iter().fold(internal_path, |path, suffix| {
@@ -235,8 +242,12 @@ pub fn from_json_hook(json: &Il2CppString, method_info: OptionalMethod) -> *cons
         
         println!("Processing bundles took {}ms", bundle_timer.elapsed().as_millis());
 
-        let new_catalog = serde_json::to_string(&catalog).unwrap().into();
+        let new_catalog = simd_json::to_string(&catalog).unwrap();
         println!("Catalog patching took {}ms", timer.elapsed().as_millis());
+        
+        let new_catalog = new_catalog.into();
+        println!("Catalog convertion to Il2CppString took {}ms", timer.elapsed().as_millis());
+
 
         if cache_modified {
             let out_cache = miniserde::json::to_string(&cache);

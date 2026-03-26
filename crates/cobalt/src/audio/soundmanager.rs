@@ -66,7 +66,7 @@ pub fn soundmanager_postevent_with_temporarygameobject(
             let voice_name = unsafe { combat_character_appearance_create_for_sound(my_unit, None).sound.voice_id };
 
             // Check if the voice_name is a special one that defines a main voice and a fallback like `Voice="SeasideDragon!PlayerF"``
-            let voice_name_parsed = ParsedVoice::parse(voice_name);
+            let _voice_name_parsed = ParsedVoice::parse(voice_name);
 
             match ParsedVoice::parse(voice_name) {
                 ParsedVoice::DefaultVoiceEvent(_) => {

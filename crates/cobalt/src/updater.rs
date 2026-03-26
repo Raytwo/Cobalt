@@ -4,7 +4,8 @@ use std::sync::{atomic::AtomicBool, OnceLock};
 use engage::{
     dialog::yesno::{BasicDialogItemNo, TwoChoiceDialogMethods, YesNoDialog}, menu::BasicMenuResult, sequence::mainmenusequence::MainMenuSequence
 };
-
+use engage::gameuserdata::GameUserData;
+use engage::util::get_singleton_proc_instance;
 use crate::api::events::SystemEvent;
 
 pub static UPDATE_AVAILABLE: AtomicBool = AtomicBool::new(false);
@@ -14,9 +15,13 @@ pub struct UpdaterDialogChoice;
 
 impl TwoChoiceDialogMethods for UpdaterDialogChoice {
     extern "C" fn on_second_choice(_this: &mut BasicDialogItemNo, _method_info: OptionalMethod) -> BasicMenuResult {
-        updater::check_for_updates(crate::utils::env::get_cobalt_version(), |_, _, _| true);
-        // Supposedly there is nothing to return here since the game will reboot but let's accomodate the compiler
-        BasicMenuResult::se_decide()
+        // lazy check, only do the update if in main menu and current sequence is 0
+        if get_singleton_proc_instance::<MainMenuSequence>().is_some() && GameUserData::get_sequence() == 0 {
+            updater::check_for_updates(crate::utils::env::get_cobalt_version(), |_, _, _| true);
+            // Supposedly there is nothing to return here since the game will reboot but let's accomodate the compiler
+            BasicMenuResult::se_decide()
+        }
+        else { BasicMenuResult::close_cancel() }
     }
 }
 

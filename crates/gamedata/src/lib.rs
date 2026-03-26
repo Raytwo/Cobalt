@@ -1,5 +1,3 @@
-#![feature(ptr_sub_ptr)]
-
 use std::{
     sync::{LazyLock, Mutex},
     collections::HashMap,
@@ -105,8 +103,9 @@ pub fn structdataarray_import(
     // println!("{}.xml took {}ms", path.get_string().unwrap(), now.elapsed().as_millis());
 }
 
-#[unity::hook("App", "Database", "Completed")]
+#[unity::hook("App", "Database", "Release")]
 pub fn database_completed_hook(method_info: OptionalMethod) {
+    println!("Database released");
     CACHE.lock().unwrap().clear();
     call_original!(method_info);
 }

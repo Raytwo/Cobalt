@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use unity::prelude::*;
 
 use engage::{
-    gamedata::{item::ItemData, unit::Unit, Gamedata, JobData, WeaponMask}, noticemanager::NoticeManager, proc::ProcInst, script::{DynValue, EventResultScriptCommand, EventScript, EventScriptCommand, ScriptUtils}
+    gamedata::{item::ItemData, unit::Unit, Gamedata, JobData, WeaponMask}, map::image::MapImage, noticemanager::NoticeManager, proc::ProcInst, script::{DynValue, EventResultScriptCommand, EventScript, EventScriptCommand, ScriptUtils}, util::get_instance
 };
 
 #[unity::from_offset("App", "ScriptUtil", "GetSequence")]
@@ -49,10 +49,36 @@ impl ScriptCobalt {
         // local x = HasPurchasedSeasonPass() -- bool
         event.register_function("HasPurchasedSeasonPass", cobaltsystem_has_seasonpass);
         event.register_action("AddBondRing", add_bond_ring);
+        event.register_action("MapSetSize", map_set_size);
+        event.register_action("MapSetCoords", map_set_coords);
 
         // Process the callbacks to register lua methods
         EVENTSCRIPT_CB.lock().unwrap().iter().for_each(|cb| cb(event));
     }
+}
+
+extern "C" fn map_set_coords(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
+    let x = args.try_get_i32(0);
+    let y = args.try_get_i32(1);
+
+    let map_image = get_instance::<MapImage>();
+    map_image.playarea_x = x;
+    map_image.playarea_z = y;
+    map_image.playarea_x1 = x;
+    map_image.playarea_z1 = y;
+
+
+}
+
+#[skyline::from_offset(0x01de2ba0)]
+fn mapimage_set_size(ring: &MapImage, w: i32, h: i32, method_info: OptionalMethod);
+
+extern "C" fn map_set_size(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
+    let w = args.try_get_i32(0);
+    let h = args.try_get_i32(1);
+
+    let map_image = get_instance::<MapImage>();
+    unsafe { mapimage_set_size(&map_image, w, h, None); }
 }
 
 #[unity::class("App", "RingData")]
@@ -63,7 +89,7 @@ impl Gamedata for RingData {}
 #[skyline::from_offset(0x01c5d420)]
 fn unit_ring_pool_add(ring: &Il2CppString, owner: Option<&Unit>, count: i32, method_info: OptionalMethod);
 
-extern "C" fn add_bond_ring(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn add_bond_ring(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     if let Some(rnid) = args.try_get_string(0) {
         RingData::get(&rnid.to_string()).unwrap_or_else(|| {
             panic!("AddBondRing: Ring with RNID'{}' does not exist", rnid.to_string());
@@ -79,12 +105,13 @@ extern "C" fn add_bond_ring(args: &Il2CppArray<DynValue>, _method_info: Optional
     }
 }
 
-extern "C" fn cobaltsystem_notice(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
-    let string = args.try_get_string(0).unwrap();
-    NoticeManager::add(string);
+extern "C" fn cobaltsystem_notice(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
+    if let Some(string) = args.try_get_string(0) {
+        NoticeManager::add(string);
+    }
 }
 
-extern "C" fn cobaltsystem_has_seasonpass(_args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) -> &'static DynValue {
+extern "C" fn cobaltsystem_has_seasonpass(_args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) -> &'static DynValue {
     let has_dlc = unsafe { dlcmanager_hascontent(0, None) };
     let dynval = DynValue::new_boolean(has_dlc);
 
@@ -94,21 +121,42 @@ extern "C" fn cobaltsystem_has_seasonpass(_args: &Il2CppArray<DynValue>, _method
 #[unity::from_offset("App", "DLCManager", "HasContent")]
 fn dlcmanager_hascontent(content: i32, method_info: OptionalMethod) -> bool;
 
-extern "C" fn cobaltsystem_unitsetjob(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
-    let unit_data = args.try_get_unit(0).unwrap_or_else(|| {
-        let pid = args.try_get_string(0).unwrap();
-        panic!("UnitSetJob: PID provided ({}) is invalid", pid.to_string());
-    });
+extern "C" fn cobaltsystem_unitsetjob(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
+    let pid = match args.try_get_string(0) {
+        Some(pid) => pid.to_string(),
+        None => {
+            NoticeManager::add("UnitSetJob: no PID provided");
+            return;
+        },
+    };
 
-    let jid = args.try_get_string(1);
-    let weapon_mask_flag = args.try_get_i32(2);
+    let jid = match args.try_get_string(1) {
+        Some(jid) => jid.to_string(),
+        None => {
+            NoticeManager::add("UnitSetJob: no JID provided");
+            return;
+        }
+    };
 
-    let job_data = JobData::get(&jid.unwrap().to_string()).unwrap_or_else(|| {
-        let jid = args.try_get_string(1).unwrap();
-        panic!("UnitSetJob: Job with JID '{}' does not exist", jid.to_string());
-    });
+    let unit_data = match args.try_get_unit(0) {
+        Some(unit) => unit,
+        None => {
+            NoticeManager::add(format!("UnitSetJob: No unit found for PID '{}'", pid));
+            return;
+        }
+    };
+
+    let job_data = match JobData::get(&jid) {
+        Some(job) => job,
+        None => {
+            NoticeManager::add(format!("UnitSetJob: Job with JID '{}' does not exist", jid));
+            return;
+        }
+    };
 
     unit_data.class_change(job_data);
+
+    let weapon_mask_flag = args.try_get_i32(2);
 
     // If argument is empty
     if weapon_mask_flag == i32::MAX {
@@ -131,7 +179,7 @@ extern "C" fn cobaltsystem_unitsetjob(args: &Il2CppArray<DynValue>, _method_info
     unit_data.set_selected_weapon(weapon_mask);
 }
 
-extern "C" fn cobaltsystem_unitsetlevel(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_unitsetlevel(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let unit_data = args.try_get_unit(0).unwrap_or_else(|| {
         let pid = args.try_get_string(0).unwrap();
         panic!("UnitSetLevel: PID provided ({}) is invalid", pid.to_string());
@@ -143,7 +191,7 @@ extern "C" fn cobaltsystem_unitsetlevel(args: &Il2CppArray<DynValue>, _method_in
     unit_data.set_level(level);
 }
 
-extern "C" fn cobaltsystem_unit_learnjobskill(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_unit_learnjobskill(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let unit_data = args.try_get_unit(0).unwrap_or_else(|| {
         let pid = args.try_get_string(0).unwrap();
         panic!("UnitSetJob: PID provided ({}) is invalid", pid.to_string());
@@ -165,7 +213,7 @@ pub fn app_transporter_add(unititem: &UnitItem, method_info: OptionalMethod);
 #[unity::from_offset("App", "UnitItem", ".ctor")]
 pub fn unititem_ctor(this: &UnitItem, item: &ItemData, method_info: OptionalMethod);
 
-extern "C" fn cobaltsystem_itemgainsilent(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_itemgainsilent(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let unit_data = args.try_get_unit(0);
     let item_data = args.try_get_item(1).unwrap_or_else(|| {
         let iid = args.try_get_string(1).unwrap();
@@ -183,7 +231,7 @@ extern "C" fn cobaltsystem_itemgainsilent(args: &Il2CppArray<DynValue>, _method_
     }
 }
 
-extern "C" fn cobaltsystem_menuitemshopshow(_args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_menuitemshopshow(_args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let proc = unsafe { scriptutil_getsequence(None) };
     
     unsafe { hubitemshopsequence_createbind(proc, None) }
@@ -191,7 +239,7 @@ extern "C" fn cobaltsystem_menuitemshopshow(_args: &Il2CppArray<DynValue>, _meth
     unsafe { scriptutil_yield(None) }
 }
 
-extern "C" fn cobaltsystem_menuweaponshopshow(_args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_menuweaponshopshow(_args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let proc = unsafe { scriptutil_getsequence(None) };
     
     unsafe { hubweaponshopsequence_createbind(proc, None) }
@@ -199,7 +247,7 @@ extern "C" fn cobaltsystem_menuweaponshopshow(_args: &Il2CppArray<DynValue>, _me
     unsafe { scriptutil_yield(None) }
 }
 
-extern "C" fn cobaltsystem_menurefineshopshow(_args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_menurefineshopshow(_args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let proc = unsafe { scriptutil_getsequence(None) };
     
     unsafe { hubrefineshopsequence_createbind(proc, None) }
@@ -207,7 +255,7 @@ extern "C" fn cobaltsystem_menurefineshopshow(_args: &Il2CppArray<DynValue>, _me
     unsafe { scriptutil_yield(None) }
 }
 
-extern "C" fn cobaltsystem_itemgift(args: &Il2CppArray<DynValue>, _method_info: OptionalMethod) {
+extern "C" fn cobaltsystem_itemgift(args: &Il2CppArray<&DynValue>, _method_info: OptionalMethod) {
     let proc = unsafe { scriptutil_getsequence(None) };
 
     let reward_id = args.try_get_string(0).unwrap();

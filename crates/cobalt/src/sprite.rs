@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicBool;
 use std::{
     alloc::Layout, ops::Deref,
 };
@@ -6,8 +7,9 @@ use engage::{gamedata::{Gamedata, PersonData, JobData, dispos::ChapterData, item
 
 use camino::Utf8PathBuf;
 use engage::gameicon::GameIconStaticFields;
+use engage::spriteatlasmanager::{FaceThumbnailStaticFields, SpriteAtlasManager};
 use image::{codecs::png::PngEncoder, ColorType, GrayImage, ImageBuffer, ImageEncoder, Luma, Pixel, Rgba, RgbaImage};
-
+use mods::ModError;
 use unity::{
     engine::{
         ui::{Image, IsImage},
@@ -158,7 +160,14 @@ pub fn uniticon_update_icon(this: &mut UnitIcon,  method_info: OptionalMethod) {
     if let Some(index) = this.icon_name {
         let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
 
-        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path) {
+        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path)
+            .or_else(|_|{    // Check if file Unit_Unit.png exist as the default icon
+                index.to_string().split('_').nth(0)
+                    .map(|unit| Utf8PathBuf::from("patches/icon/job").join(format!("{}_{}", unit, unit)).with_extension("png"))
+                    .map(|path| mods::manager::Manager::get().get_file(&path))
+                    .unwrap_or_else(||Err(ModError::MissingFile))
+            })
+        {
             let unit_icon = image::load_from_memory_with_format(&file, image::ImageFormat::Png).unwrap().to_rgba8();
 
             // Enforce sprite size
@@ -199,10 +208,16 @@ pub fn uniticon_update_icon(this: &mut UnitIcon,  method_info: OptionalMethod) {
 #[unity::hook("App", "UnitIcon", "TrySet")]
 pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppString>, palette_name: Option<&'static Il2CppString>, method_info: OptionalMethod) -> bool {
     if let Some(index) = index_name {
-        // Check if we have a sprite file with that name before proceeding
+        // Check if we have a sprite file with that name before proceeding  (Unit_Job_Item.png)
         let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
-
-        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path) {
+        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path)
+            .or_else(|_|{    // Check if file Unit_Unit.png exist as the default icon
+                index.to_string().split('_').nth(0)
+                    .map(|unit| Utf8PathBuf::from("patches/icon/job").join(format!("{}_{}", unit, unit)).with_extension("png"))
+                    .map(|path| mods::manager::Manager::get().get_file(&path))
+                    .unwrap_or_else(||Err(ModError::MissingFile))
+            })
+        {
             let unit_icon = image::load_from_memory_with_format(&file, image::ImageFormat::Png).unwrap().to_rgba8();
 
             // Enforce sprite size
@@ -232,23 +247,18 @@ pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppS
                 })
                 .unwrap();
 
-            true
-        } else {
-            if GameIcon::try_get_unit_icon_index(index).is_some() {
-                call_original!(this, index_name, palette_name, method_info)
-            }
-            else {
-                call_original!(this, palette_name, palette_name, method_info)
-            }
+            return true;
         }
-    } else {
-        if palette_name.is_some() {
-            call_original!(this, palette_name, palette_name, method_info)
+        else if GameIcon::try_get_unit_icon_index(index).is_some() {
+            return call_original!(this, index_name, palette_name, method_info);
         }
-        else {
-            call_original!(this, index_name, palette_name, method_info)
-        }
-
+    }
+    if let Some(palette) = &palette_name {
+        let default_icon = format!("{}_{}", palette, palette);
+        call_original!(this, Some(default_icon.into()), palette_name, method_info)
+    }
+    else {
+        call_original!(this, index_name, palette_name, method_info)
     }
 }
 
@@ -382,6 +392,24 @@ pub fn make_r8(uniticon: &RgbaImage, palette: &RgbaImage) -> GrayImage {
     
     r8_icon
 }
+/*
+pub fn gameicon_loadasync() {
+    let static_fields = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
+
+    if let Ok(dir) = mods::manager::Manager::get().get_directory("patches/icon/skill") {
+        if let Ok(paths) = mods::manager::Manager::get().get_files_in_directory(dir) {
+            for path in paths {
+                if path.extension() == Some("png") {
+                    let stem = Il2CppString::new(path.file_stem().unwrap());
+                    let icon = load_sprite(Some(stem), "patches/icon/skill", 0, 0, FilterMode::Trilinear).unwrap();
+                    // In case there already is an original sprite in the cache
+                    static_fields.skill.cache_table.set_item(stem, icon);
+                }
+            }
+        }
+    }
+}
+*/
 
 #[unity::hook("App", "GameIcon", "TryGetSkill")]
 pub fn get_skill_icon(name: Option<&Il2CppString>, method_info: OptionalMethod)-> &'static mut Sprite {
@@ -679,6 +707,7 @@ pub fn gmapinfocontent_setmapinfo_hook(this: &mut GmapMapInfoContent, gmap_spot:
 }
 
 pub fn add_in_default_sprites() {
+    println!("Adding default sprites");
     let game_icon_static_fields = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
     let palettes =
         game_icon_static_fields.unit_icon_pallete.cache_table.entries.iter().filter(|i| i.key.is_some())
@@ -691,11 +720,13 @@ pub fn add_in_default_sprites() {
 
     // For Sprites that have the same UnitIcon and JobIcon String: 556Marth_556Marth_NoWeapon
     palettes.iter()
-        .filter(|x| GameIcon::try_get_unit_icon_index(x.as_str()).is_none() && GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", x, x)).is_some())
+        .filter(|x|
+            GameIcon::try_get_unit_icon_index(format!("{}_{}", x, x).as_str()).is_none() &&
+                GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", x, x)).is_some())
         .for_each(|emblem|{
             if let Some(emblem_sprite) = GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", emblem, emblem)){
                 count += 1;
-                game_icon_static_fields.unit_icon_index.cache_table.add(emblem.into(), emblem_sprite);
+                game_icon_static_fields.unit_icon_index.cache_table.add(format!("{}_{}", emblem, emblem).into(), emblem_sprite);
             }
         });
     // Unique Classes that only has a few UnitIcon: 001Lueur_600DragonLord / 051Lueur_601DragonLord
@@ -709,15 +740,14 @@ pub fn add_in_default_sprites() {
                     if sprites.len() > 0 && sprites.len() < 5 { // Unique jobs probably have less than 5 total NoWeapon Sprites
                         palettes.iter()
                             .filter(|x|
-                                sprites.iter().any(|sprite|
-                                    sprite.0.contains(x.as_str())
-                                ) && GameIcon::try_get_unit_icon_index(x.as_str()).is_none()
-                            ).for_each(|palette|{
+                                sprites.iter().any(|sprite| sprite.0.contains(x.as_str()))
+                                    && GameIcon::try_get_unit_icon_index(format!("{}_{}", x, x)).is_none())
+                            .for_each(|palette|{
                             if let Some(sprite) = sprites.iter()
                                 .find(|sprite| sprite.0.contains(palette.as_str()))
                             {
                                 count += 1;
-                                game_icon_static_fields.unit_icon_index.cache_table.add(palette.into(), sprite.1);
+                                game_icon_static_fields.unit_icon_index.cache_table.add(format!("{}_{}", palette, palette).into(), sprite.1);
                             }
                         });
                     }
@@ -731,7 +761,7 @@ pub fn add_in_default_sprites() {
         .collect::<HashSet<_>>();
 
     palettes.iter()
-        .filter(|x| GameIcon::try_get_unit_icon_index(x.as_str()).is_none() )
+        .filter(|x| GameIcon::try_get_unit_icon_index(format!("{}_{}", x, x)).is_none() )
         .for_each(|palette| {
             if let Some(job) = set.iter().find(|x| x.0 == *palette).and_then(|x| JobData::try_get_hash(x.1)) {
                 for job_icon in [job.unit_icon_id_f, job.unit_icon_id_m] {
@@ -739,9 +769,10 @@ pub fn add_in_default_sprites() {
                         if let Some((pos, sprite)) = key_sprite_pair.iter()
                             .enumerate().find(|(_, x)| x.0.contains(icon.as_str()) && x.0.contains(palette.as_str()))
                         {
-                            if GameIcon::try_get_unit_icon_index(palette.as_str()).is_none() {
+                            let default_key = format!("{}_{}", palette, palette);
+                            if GameIcon::try_get_unit_icon_index(default_key.as_str()).is_none() {
                                 count += 1;
-                                game_icon_static_fields.unit_icon_index.cache_table.add(palette.into(), sprite.1);
+                                game_icon_static_fields.unit_icon_index.cache_table.add(default_key.into(), sprite.1);
                                 key_sprite_pair.remove(pos);
                             }
 
@@ -753,11 +784,98 @@ pub fn add_in_default_sprites() {
     println!("Added {} Default Sprites", count);
 }
 
+// GodFace and BondsRingFace have the same static fields
+#[repr(C)]
+pub struct FaceStaticFields {
+    pub path: &'static Il2CppString,
+    pub face_picture: &'static SpriteAtlasManager,
+}
+#[unity::hook("App", "MainSequence", "PostLoadResource")]
+pub fn add_custom_sprites_icons(this: &engage::sequence::mainsequence::MainSequence, method_info: OptionalMethod) {
+    call_original!(this, method_info);
+    println!("[MainSequence] PostLoadResource");
+    let face_thumbs = &engage::spriteatlasmanager::FaceThumbnail::class().get_static_fields_mut::<FaceThumbnailStaticFields>().face_thumb;
+    let mut added_count = 0;
+    let mut changed = 0;
+
+
+    for dir in ["patches/icon/facethumb/unit", "patches/icon/facethumb/emblem", "patches/icon/facethumb/bond"] {
+        if let Some(paths) = mods::manager::Manager::get().get_directory(dir).ok()
+            .and_then(|d| mods::manager::Manager::get().get_files_in_directory(d).ok())
+        {
+            for path in paths {
+                if path.extension() == Some("png") {
+                    let filename: &Il2CppString = path.file_stem().unwrap().into();
+                    let f = filename.to_string();
+                    if let Some(sprite) = load_sprite(Some(filename), dir, 188, 74, FilterMode::Trilinear) {
+                        if face_thumbs.cache_table.entries.iter().find(|x| x.key.is_some_and(|key| key.to_string() == f)).is_some() {
+                            println!("Change Facethumb: {}", filename);
+                            changed += 1;
+                            face_thumbs.cache_table.remove(filename);
+
+                        }
+                        else {
+                            println!("Added Facethumb: {}", filename);
+                            added_count += 1;
+                        }
+                        face_thumbs.cache_table.add(filename, sprite);
+                    }
+                }
+            }
+        }
+    }
+    let game_icon_sf = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
+    // these two are loaded in when RingSequence starts, not in MainSequence
+    // let god_face = Il2CppClass::from_name("App", "GodFacePicture").unwrap().get_static_fields_mut::<FaceStaticFields>();
+    // let bond_face = Il2CppClass::from_name("App", "BondsRingFacePicture").unwrap().get_static_fields_mut::<FaceStaticFields>();
+    for (atlas_manager, dir, width, height) in [
+        (&mut game_icon_sf.skill, "patches/icon/skill", 56, 56),
+        (&mut game_icon_sf.item, "patches/icon/item", 64, 64),
+        (&mut game_icon_sf.god_ring, "patches/icon/emblem/godring", 74, 74),
+        (&mut game_icon_sf.god_symbol, "patches/icon/emblem/godsymbol", 72, 72),
+        (&mut game_icon_sf.system, "patches/icon/system", 48, 48),
+        // (&mut god_face.face_picture, "patches/icon/emblem/godface", 388, 388),
+        // (&mut bond_face.face_picture, "patches/icon/face", 300, 300)
+    ]
+    {
+        if let Some(paths) = mods::manager::Manager::get().get_directory(dir).ok()
+            .and_then(|d| mods::manager::Manager::get().get_files_in_directory(d).ok())
+        {
+            for path in paths {
+                if path.extension() == Some("png") {
+                    let filename: &Il2CppString = path.file_stem().unwrap().into();
+                    let f = filename.to_string();
+                    if let Some(sprite) = load_sprite(Some(filename), dir, width, height, FilterMode::Trilinear) {
+                        if atlas_manager.cache_table.entries.iter().find(|x| x.key.is_some_and(|key| key.to_string() == f)).is_some()  {
+                            changed += 1;
+                            atlas_manager.cache_table.remove(filename);
+                            println!("Changed {} in {}",  filename, dir,);
+                        }
+                        else {
+                            added_count += 1;
+                            println!("Added {} from {}", filename, dir, );
+                        }
+                        atlas_manager.cache_table.add(filename, sprite);
+                    }
+                }
+            }
+        }
+    }
+    add_in_default_sprites();
+    println!("Changed/Added Sprite/Facethumb to Dictionaries: {}/{}", changed, added_count);
+}
+pub static SPRITES_PATCHED: AtomicBool = AtomicBool::new(false);
+
+// now is useless?
 pub extern "C" fn add_default_sprites(evt: &crate::api::events::Event<SystemEvent>) {
     if let crate::api::events::Event::Args(ev) = evt {
         if let SystemEvent::ProcInstJump { proc, .. } = ev {
             if proc.hashcode == crate::sequences::titleloop::TITLELOOPSEQUENCE_HASHCODE {
-                add_in_default_sprites();
+                if !SPRITES_PATCHED.load(std::sync::atomic::Ordering::Relaxed) {
+                    add_in_default_sprites();
+                    // gameicon_loadasync();
+                    SPRITES_PATCHED.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
             }
         }
     }

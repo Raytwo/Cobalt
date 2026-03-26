@@ -47,7 +47,7 @@ pub struct WwiseFileHolder {
 }
 
 #[skyline::hook(offset = 0x169d700)]
-pub fn wwise_file_open_hook(path: *const i8, unk1: u64, _unk2: *const u8, unk3: &mut WwiseFileHolder) -> u32 {
+pub fn wwise_file_open_hook(path: *const u8, unk1: u64, _unk2: *const u8, unk3: &mut WwiseFileHolder) -> u32 {
     let str_path = unsafe { CStr::from_ptr(path).to_str().unwrap() };
     let utfpath = Utf8PathBuf::from_str(str_path).unwrap();
 

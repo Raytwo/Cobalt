@@ -1,5 +1,4 @@
-#![feature(if_let_guard, int_roundings, ptr_sub_ptr)]
-#![feature(new_zeroed_alloc)]
+#![feature(if_let_guard, int_roundings)]
 
 use std::sync::atomic::{
     AtomicBool,
@@ -78,7 +77,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::sequences::mainmenu::topmenu::menu::createmenubind_hook,
         cobalt::sequences::mainmenu::mainmenusequence_getdesc_hook,
         cobalt::script::scriptsystem_log,
-        cobalt::script::hubsequence_mapopeningevent_hook,
+        cobalt::script::eventsequence_mapopening_hook,
         cobalt::script::eventscript_loadimpl_hook,
         cobalt::msbt::language_reflectchange,
         cobalt::vibrations::combat::hits::combat_damagesound_play,
@@ -107,23 +106,23 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::vibrations::queue_handlers::combat_skip_skip,
         cobalt::vibrations::combat::projectiles::rods::cmd_sound,
         cobalt::vibrations::combat::criticals::my_start,
-        cobalt::sprite::get_skill_icon,
-        cobalt::sprite::get_item_icon_string,
-        cobalt::sprite::get_item_icon_itemdata,
+        // cobalt::sprite::get_item_icon_string,
+        // cobalt::sprite::get_item_icon_itemdata,
         cobalt::sprite::uniticon_try_set,
         cobalt::sprite::uniticon_update_icon,
         cobalt::sprite::mapuigauge_cctor,
         cobalt::sprite::mapuigauge_onenable,
         cobalt::sprite::mapuigauge_getspritebyindex,
-        cobalt::sprite::facethumb_get_unit,
-        cobalt::sprite::facethumb_get_god,
-        cobalt::sprite::facethumb_get_ring,
+        // cobalt::sprite::facethumb_get_unit,
+        // cobalt::sprite::facethumb_get_god,
+        // cobalt::sprite::facethumb_get_ring,
         cobalt::sprite::bondsringfacepicture_get,
         cobalt::sprite::godfacepicture_getsprite,
-        cobalt::sprite::gameicon_trygetgodring_unit,
-        cobalt::sprite::gameicon_trygetgodring_god,
-        cobalt::sprite::gameicon_trygetgodsymbol,
+        // cobalt::sprite::gameicon_trygetgodring_unit,
+        // cobalt::sprite::gameicon_trygetgodring_god,
+        // cobalt::sprite::gameicon_trygetgodsymbol,
         cobalt::sprite::godcolorrefineemblem_getcolor,
+        cobalt::sprite::add_custom_sprites_icons,
         cobalt::procinst_jump,
         cobalt::proc_inst_create_bind,
         cobalt::graphics::render_scale::set_render_scale,
@@ -190,7 +189,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
                 match module.as_ref() {
                     Ok(plugin) => {
                         let mut symbol = 0usize;
-                        nn::ro::LookupModuleSymbol(&mut symbol, plugin, b"main\0".as_ptr());
+                        nn::ro::LookupModuleSymbol(&mut symbol, plugin as *const skyline::nn::ro::Module, b"main\0".as_ptr());
                         let nul = plugin
                             .Name
                             .iter()
@@ -221,7 +220,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
 
     cobalt::api::events::cobapi_register_system_event_listener(cobalt::sequences::titleloop::grand_opening_skip);
     cobalt::api::events::cobapi_register_system_event_listener(cobalt::updater::catalog_mount_update_check);
-    cobalt::api::events::cobapi_register_system_event_listener(cobalt::sprite::add_default_sprites);
+    // cobalt::api::events::cobapi_register_system_event_listener(cobalt::sprite::add_default_sprites);
     res
 }
 

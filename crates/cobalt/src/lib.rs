@@ -1,6 +1,4 @@
-#![feature(ptr_sub_ptr)]
 #![feature(stmt_expr_attributes)]
-#![feature(unsafe_cell_from_mut)]
 
 use std::cell::RefCell;
 use engage::{

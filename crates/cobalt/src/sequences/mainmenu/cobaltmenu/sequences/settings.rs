@@ -4,6 +4,7 @@ use engage::{
     sequence::configsequence::ConfigSequence,
     titlebar::TitleBar,
 };
+use engage::gameuserdata::GameUserData;
 use unity::prelude::*;
 
 mod opening;
@@ -68,8 +69,9 @@ impl BasicMenuItemMethods for GlobalConfigMenuItem {
 
 pub extern "C" fn open_anime_all_ondispose(this: &mut ProcInst, _method_info: OptionalMethod) {
     // TODO: Make a variant that accepts Mess IDs
-    TitleBar::open_header("Cobalt", localize::mess::get("cobalt_main_menu_title_bar_text"), "");
-
+    if GameUserData::get_sequence() == 0 {
+        TitleBar::open_header("Cobalt", localize::mess::get("cobalt_main_menu_title_bar_text"), "");
+    }
     this.parent
         .as_ref()
         .unwrap()
