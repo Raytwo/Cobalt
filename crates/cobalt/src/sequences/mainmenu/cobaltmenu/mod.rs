@@ -1,19 +1,22 @@
-use unity::{prelude::*, system::List};
+use engage::app::basicmenu::{BasicMenu, IBasicMenuMethods};
+use engage::app::basicmenuitem::BasicMenuItem;
+use engage::app::proc::Proc;
+use engage::app::procboolmethod::ProcBoolMethod;
+use engage::app::procdesc::ProcDesc;
+use engage::app::procinst::{IProcInstMethods, ProcInst};
+use engage::app::procvoidmethod::ProcVoidMethod;
+use engage::app::resourcemanager_2::ResourceManager_2 as ResourceManager;
+use engage::app::shoptopmenucontent::ShopTopMenuContent;
+use engage::system::collections::generic::list_1::{IList_1Methods as IListMethods, List_1 as List};
+use unity::{Array, ClassIdentity, FromIlInstance, OptionalMethod};
 
 use engage::{
-    menu::{BasicMenu, BasicMenuItem, BasicMenuMethods, MenuSequence},
-    proc::{desc::ProcDesc, Bindable, ProcBoolMethod, ProcInst, ProcVoidMethod},
-    titlebar::TitleBar,
+    BasicMenuExt, BasicMenuItemExt, ProcBoolMethodExt, ProcExt, ProcVoidMethodExt, TitleBar,
 };
 
 pub mod sequences;
 
-use sequences::{
-    reloadmsbt::*,
-    reloadxml::*,
-    settings::*,
-    update::*
-};
+use sequences::{reloadmsbt::*, reloadxml::*, settings::*, update::*};
 
 pub struct CobaltMenuSequence;
 
@@ -23,81 +26,78 @@ enum CobaltMenuSequenceLabel {
     Exit,
 }
 
-impl MenuSequence for CobaltMenuSequence {
-    fn get_proc_desc(this: &'static ProcInst) -> Vec<&'static mut ProcDesc> {
-        // Create and display the menu
-
-        vec![
-            ProcDesc::label(CobaltMenuSequenceLabel::Start as _),
-            ProcDesc::call(ProcVoidMethod::new(this, Self::load_resources)),
-            ProcDesc::wait_while_true(ProcBoolMethod::new(this, Self::is_loading_resources)),
-            ProcDesc::call(ProcVoidMethod::new(this, Self::create_menu_bind)),
-            ProcDesc::label(CobaltMenuSequenceLabel::Exit as _),
-            ProcDesc::call(ProcVoidMethod::new(this, Self::exit)),
-            ProcDesc::end(),
-        ]
-    }
-
-    fn proc_name() -> &'static str {
-        "CobaltMenuSequence"
-    }
-}
-
 impl CobaltMenuSequence {
-    pub extern "C" fn load_resources(_parent: &mut impl Bindable, _method_info: OptionalMethod) {
-        // Load the prefab for the Shop UI
-        unsafe { engage::menu::content::shoptopmenu::shop_top_menu_content_load_prefab_async(None) };
-    }
+    fn build_procdescs(this: ProcInst) -> Array<ProcDesc> {
+        let descs = [
+            Proc::label(CobaltMenuSequenceLabel::Start as i32),
+            Proc::call_method(
+                ProcVoidMethod::from_fn(this.into(), Self::load_resources).unwrap(),
+            ),
+            Proc::wait_while_true_2(
+                ProcBoolMethod::from_fn(this.into(), Self::is_loading_resources).unwrap(),
+            ),
+            Proc::call_method(
+                ProcVoidMethod::from_fn(this.into(), Self::create_menu_bind).unwrap(),
+            ),
+            Proc::label(CobaltMenuSequenceLabel::Exit as i32),
+            Proc::call_method(ProcVoidMethod::from_fn(this.into(), Self::exit).unwrap()),
+            Proc::end(),
+        ];
 
-    pub extern "C" fn exit(_parent: &mut impl Bindable, _method_info: OptionalMethod) {
-        TitleBar::close_header();
-
-        unsafe {
-            // Unload the prefab for the Shop UI
-            engage::menu::content::shoptopmenu::shop_top_menu_content_unload_prefab(None);
+        let arr = Array::<ProcDesc>::new(<ProcDesc as ClassIdentity>::class().raw(), descs.len())
+            .expect("CobaltMenuSequence: ProcDesc[] allocation failed");
+        for (i, d) in descs.iter().enumerate() {
+            arr.set(i, *d);
         }
+        arr
     }
 
-    pub extern "C" fn is_loading_resources(_parent: &mut impl Bindable, _method_info: OptionalMethod) -> bool {
-        // This method will be pooled continuously until all the resources are loaded
-        unsafe { engage::resourcemanager::is_loading(None) }
+    pub fn bind(parent: ProcInst) {
+        let proc = <ProcInst as FromIlInstance>::instantiate()
+            .expect("CobaltMenuSequence: ProcInst allocation failed");
+        let descs = Self::build_procdescs(proc);
+        proc.create_bind(parent, descs, unity::Il2CppString::from("CobaltMenuSequence"));
     }
 
-    pub extern "C" fn create_menu_bind(parent: &'static mut impl Bindable, _method_info: OptionalMethod) {
+    pub extern "C" fn load_resources(_parent: ProcInst, _method_info: OptionalMethod) {
+        ShopTopMenuContent::load_prefab_async();
+    }
+
+    pub extern "C" fn exit(_parent: ProcInst, _method_info: OptionalMethod) {
+        TitleBar::close_header();
+        ShopTopMenuContent::unload_prefab();
+    }
+
+    pub extern "C" fn is_loading_resources(_parent: ProcInst, _method_info: OptionalMethod) -> bool {
+        ResourceManager::is_loading()
+    }
+
+    pub extern "C" fn create_menu_bind(parent: ProcInst, _method_info: OptionalMethod) {
         println!("CobaltMenuSequence::CreateMenuBind");
 
-        let menu_content = unsafe { engage::menu::content::shoptopmenu::shop_top_menu_content_create(None) }.unwrap();
+        let menu_content = ShopTopMenuContent::create();
 
-        // Create a List<BasicMenuItem> for the BasicMenu
-        let menu_item_list = List::<BasicMenuItem>::with_capacity(3).unwrap();
+        let menu_item_list = List::<BasicMenuItem>::new();
+        menu_item_list.ensure_capacity(4);
 
-        // Create and add our button to the item list
-        let menu_item = BasicMenuItem::new_impl::<ReloadXmlMenuItem>();
-        menu_item_list.add(menu_item);
-        let menu_item = BasicMenuItem::new_impl::<ReloadMsbtMenuItem>();
-        menu_item_list.add(menu_item);
-        let menu_item = BasicMenuItem::new_impl::<GlobalConfigMenuItem>();
-        menu_item_list.add(menu_item);
-        
-        if crate::updater::UPDATE_AVAILABLE.load(std::sync::atomic::Ordering::Relaxed) {
-            let menu_item = BasicMenuItem::new_impl::<UpdateAvailableMenuItem>();
-            menu_item_list.add(menu_item);
+        menu_item_list.add(BasicMenuItem::new_impl::<ReloadXmlMenuItem>());
+        menu_item_list.add(BasicMenuItem::new_impl::<ReloadMsbtMenuItem>());
+        menu_item_list.add(BasicMenuItem::new_impl::<GlobalConfigMenuItem>());
+
+        if crate::updater::update_available() {
+            menu_item_list.add(BasicMenuItem::new_impl::<UpdateAvailableMenuItem>());
         }
 
-        // Create a BasicMenu and fill it with our item list
-        let basic_menu = BasicMenu::new(menu_item_list, menu_content);
-        let descs = basic_menu.create_default_desc();
-        
-        basic_menu.create_bind(parent, descs, "CobaltMenu");
+        let basic_menu = <BasicMenu as BasicMenuExt>::build(menu_item_list, menu_content.into());
+        let descs = BasicMenuExt::create_default_desc(basic_menu);
+        let proc: ProcInst = basic_menu.into();
+        proc.create_bind(parent, descs, unity::Il2CppString::from("CobaltMenu"));
         basic_menu.bind_parent_menu();
 
-        TitleBar::open_header("Cobalt", localize::mess::get("cobalt_main_menu_title_bar_text"), "");
-
-        // Don't let the babeys enter the menu
-        // GameMessage::create_key_wait(parent, "Nothing to see here.");
+        TitleBar::open_header(
+            "Cobalt",
+            localize::mess::get("cobalt_main_menu_title_bar_text"),
+            "",
+        );
     }
 }
-
-#[repr(C)]
-#[unity::class("System.Collections.Generic", "List`1")]
-pub struct SystemList {}

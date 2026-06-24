@@ -92,7 +92,7 @@ macro_rules! vibe_log {
     ($($x:tt)*) => {
         #[allow(unused_unsafe)]
         unsafe {
-            use crate::vibrationevents::USE_VIBRATION_XML_DEVELOPER_MODE;
+            use $crate::vibrationevents::USE_VIBRATION_XML_DEVELOPER_MODE;
             if USE_VIBRATION_XML_DEVELOPER_MODE {
                 print!("VibrationEvent -- ");
                 println!($($x)*);

@@ -1,54 +1,52 @@
-use engage::{
-    menu::{BasicMenu, BasicMenuItem, BasicMenuResult},
-    proc::ProcInst,
-};
+use engage::app::basicmenu::{BasicMenu, IBasicMenu};
+use engage::app::basicmenuitem::BasicMenuItem;
+use engage::app::mainmenusequence::{IMainMenuSequence, MainMenuSequence, MainMenuSequence_Label};
+use engage::app::procinst::{IProcInstMethods, ProcInst};
+use engage::app::singletonprocinst_1::ISingletonProcInst_1Methods;
 use unity::prelude::*;
-
-use crate::sequences::mainmenu::MainMenuSequence;
+use engage::{
+    BasicMenuExt, BasicMenuItemExt, BasicMenuItemMethods, BasicMenuResult, List_1Ext,
+};
 
 #[skyline::hook(offset = 0x1b69130)]
-pub fn createmenubind_hook(proc: &mut ProcInst, menu_content: *const u8, method_info: OptionalMethod) {
+pub fn createmenubind_hook(proc: ProcInst, menu_content: IlInstance, method_info: OptionalMethod) {
     call_original!(proc, menu_content, method_info);
 
-    proc.child.as_mut().unwrap()
-        .get_class_mut()
-        .get_virtual_method_mut("GetShowRowMax")
-        .map(|method| method.method_ptr = get_show_row_max as _)
-        .unwrap();
+    let child = proc.get_child();
+    if child.is_null() {
+        return;
+    }
 
-    let config_menu = proc.child.as_mut().unwrap().cast_mut::<BasicMenu<BasicMenuItem>>();
-    config_menu.reserved_show_row_num = 4;
+    let config_menu = <BasicMenu as unity::FromIlInstance>::from_il_instance(child.as_instance());
 
-    let cobalt_button = Il2CppObject::<BasicMenuItem>::from_class(config_menu.full_menu_item_list.items[0].get_class().clone()).unwrap();
+    let child_class = child.override_class();
+    child_class.override_virtual_method("GetShowRowMax", unity::method_info!(get_show_row_max, 0));
 
+    config_menu.set_m_reserved_show_row_num(4);
 
-    cobalt_button
-        .get_class_mut()
-        .get_virtual_method_mut("ACall")
-        .map(|method| method.method_ptr = mod_menu_item_acall as _).unwrap();
-
-    cobalt_button
-        .get_class_mut()
-        .get_virtual_method_mut("GetName")
-        .map(|method| method.method_ptr = mod_menu_item_getname as _).unwrap();
-
-    config_menu.full_menu_item_list.add(cobalt_button);
+    let full_list = config_menu.m_full_menu_item_list();
+    if full_list.count() == 0 {
+        return;
+    }
+    let template = full_list.get(0);
+    let cobalt_button = BasicMenuItem::new_impl_from_template::<CobaltMenuItem>(template);
+    config_menu.add_item(cobalt_button);
 }
 
-extern "C" fn mod_menu_item_getname(_this: &mut BasicMenuItem, _method_info: OptionalMethod) -> &'static Il2CppString {
-    "Cobalt".into()
+struct CobaltMenuItem;
+
+impl BasicMenuItemMethods for CobaltMenuItem {
+    extern "C" fn get_name(_this: BasicMenuItem, _method_info: OptionalMethod) -> Il2CppString {
+        "Cobalt".into()
+    }
+
+    extern "C" fn a_call(_this: BasicMenuItem, _method_info: OptionalMethod) -> BasicMenuResult {
+        println!("CobaltMenuItem::ACall");
+        MainMenuSequence::get_instance().set_m_next_sequence(MainMenuSequence_Label { value: 31 });
+        BasicMenuResult::se_decide().with_close_this(true)
+    }
 }
 
-extern "C" fn mod_menu_item_acall(_this: &mut BasicMenuItem, _method_info: OptionalMethod) -> BasicMenuResult {
-    let main_menu_seq = MainMenuSequence::get_mut();
-
-    println!("ModMenuItem::ACall");
-
-    main_menu_seq.next_sequence = 31; // Made up Cobalt label
-
-    BasicMenuResult::se_decide().with_close_this(true)
-}
-
-extern "C" fn get_show_row_max(_this: &mut BasicMenuItem, _method_info: OptionalMethod) -> i32 {
+extern "C" fn get_show_row_max(_this: BasicMenu, _method_info: OptionalMethod) -> i32 {
     4
 }

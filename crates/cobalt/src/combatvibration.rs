@@ -1,6 +1,10 @@
-use engage::{gamevariable::GameVariableManager, mapmind::MapMind, vibrationmanager::vibrate};
-use unity::prelude::*;
+use engage::vibrate;
+use engage::app::mapmind::{IMapMindMethods, MapMind};
+use engage::app::singletonclass_1::ISingletonClass_1Methods;
+use engage::app::unit::IUnitMethods;
+use unity::{Cast, OptionalMethod};
 
+use engage::GameVariableManager;
 use crate::config::combatvibration::COMBAT_VIBRATION_KEY;
 
 // bool App.MapSequenceHuman$$PickUnitTick
@@ -8,10 +12,10 @@ use crate::config::combatvibration::COMBAT_VIBRATION_KEY;
 #[unity::hook("App", "MapSequenceHuman", "PickUnitTick")]
 pub fn pick_unit_tick(this: *const u8, label: i32, method_info: OptionalMethod) {
     call_original!(this, label, method_info);
-    let my_unit = MapMind::get_unit();
-    if my_unit.is_engaging() {
+    let my_unit = MapMind::get_instance().get_unit();
         // TODO: Find the right value such that this doesn't feel annoying.
         // TODO: Ensure the engaging vibration survive opening of menus (this tick is only when selecting and moving the unit).
+    if !my_unit.is_null() && my_unit.is_engaging_2() {
         magic_wand();
     }
 }
@@ -19,8 +23,7 @@ pub fn pick_unit_tick(this: *const u8, label: i32, method_info: OptionalMethod) 
 /// Supposed to represent the vibrating power of an engaged unit.
 /// But actually just feels annoying.
 fn magic_wand() {
-    let vibration_enabled = GameVariableManager::get_bool(COMBAT_VIBRATION_KEY);
-    if !vibration_enabled {
+    if !GameVariableManager::get_bool(COMBAT_VIBRATION_KEY) {
         return;
     }
     vibrate(0.01666666666, 0.04, 0.01, 0.05, 20.0, 50.0);
@@ -30,10 +33,10 @@ fn magic_wand() {
 #[unity::hook("App", "MapUnitCommandMenu", "Tick")]
 pub fn app_map_unit_command_menu_tick(this: *const u8, method_info: OptionalMethod) {
     call_original!(this, method_info);
-    let my_unit = MapMind::get_unit();
-    if my_unit.is_engaging() {
+    let my_unit = MapMind::get_instance().get_unit();
         // TODO: Find the right value such that this doesn't feel annoying.
         // TODO: Ensure the engaging vibration survive opening of menus (this tick is only when selecting and moving the unit).
+    if !my_unit.is_null() && my_unit.is_engaging_2() {
         magic_wand();
     }
 }

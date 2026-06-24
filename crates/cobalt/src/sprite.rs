@@ -1,615 +1,424 @@
-use std::sync::atomic::AtomicBool;
-use std::{
-    alloc::Layout, ops::Deref,
-};
-use std::collections::HashSet;
-use engage::{gamedata::{Gamedata, PersonData, JobData, dispos::ChapterData, item::ItemData, ring::RingData, unit::Unit, GodData}, uniticon::UnitIcon, gameicon::GameIcon};
+use std::alloc::Layout;
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use camino::Utf8PathBuf;
-use engage::gameicon::GameIconStaticFields;
-use engage::spriteatlasmanager::{FaceThumbnailStaticFields, SpriteAtlasManager};
-use image::{codecs::png::PngEncoder, ColorType, GrayImage, ImageBuffer, ImageEncoder, Luma, Pixel, Rgba, RgbaImage};
-use mods::ModError;
-use unity::{
-    engine::{
-        ui::{Image, IsImage},
-        Color, FilterMode, ImageConversion, Rect, Sprite, SpriteMeshType, Texture2D, Vector2,
-    }, il2cpp::object::Array, prelude::*, system::Dictionary
-};
+use image::{codecs::png::PngEncoder, ColorType, GrayImage, ImageBuffer, ImageEncoder, Luma, Rgba, RgbaImage};
+
+use engage::app::chapterdata::IChapterDataMethods;
+use engage::app::facethumbnail::FaceThumbnail;
+use engage::app::gameicon::GameIcon;
+use engage::app::gmapmapinfocontent::{GmapMapInfoContent, IGmapMapInfoContent};
+use engage::app::gmapspot::{GmapSpot, IGmapSpotMethods};
+use engage::app::goddata::{GodData, IGodDataMethods};
+use engage::app::godcolorrefineemblem::GodColorRefineEmblem;
+use engage::app::jobdata::{IJobDataMethods, JobData};
+use engage::app::mainsequence::MainSequence;
+use engage::app::persondata::{IPersonDataMethods, PersonData};
+use engage::app::ringdata::{IRingDataMethods, RingData};
+use engage::app::spriteatlasmanager_2::{ISpriteAtlasManager_2, SpriteAtlasManager_2 as SpriteAtlasManager};
+use engage::app::structdata_1::IStructData_1Methods as IStructDataMethods;
+use engage::app::uniticon::{IUnitIcon, IUnitIconMethods, UnitIcon};
+use engage::root::mapuigauge::{IMapUIGauge, MapUIGauge};
+
+use engage::unity_engine::sprite::Sprite;
+use engage::unity_engine::texture2d::{ITexture2DMethods, Texture2D};
+use engage::unity_engine::texture::ITextureMethods;
+use engage::unity_engine::imageconversion::ImageConversion;
+use engage::unity_engine::ui::graphic::IGraphicMethods;
+use engage::unity_engine::ui::image::IImageMethods;
+use engage::unity_engine::u2d::spriteatlas::ISpriteAtlasMethods;
+use engage::unity_engine::color::Color;
+use engage::unity_engine::rendering::colorutils::ColorUtils;
+use engage::unity_engine::filtermode::FilterMode;
+use engage::unity_engine::rect::Rect;
+use engage::unity_engine::spritemeshtype::SpriteMeshType;
+use engage::unity_engine::vector2::Vector2;
+use engage::unity_engine::experimental::rendering::graphicsformat::GraphicsFormat;
+use engage::unity_engine::experimental::rendering::texturecreationflags::TextureCreationFlags;
+use engage::system::collections::generic::dictionary_2::IDictionary_2Methods as IDictionaryMethods;
+use unity::prelude::*;
+use engage::{List_1Ext, Dictionary_2Ext};
+
 use crate::api::events::SystemEvent;
 
 #[repr(i32)]
 #[derive(Debug, PartialEq)]
-
 pub enum PngResult {
     Ok = 0,
     Error,
-    OutOfMemory
+    OutOfMemory,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 pub struct Dimension {
     width: i32,
-    height: i32
+    height: i32,
 }
 
 #[repr(C)]
 pub struct PngDecoder {
-    unk: [u8; 0x8C],
+    _unk: [u8; 0x8C],
 }
 
 impl PngDecoder {
-    extern "C" fn pngdecoder_malloc(size: usize, _user_data: *const u8) -> *mut u8 {
-        if let Ok(layout) = Layout::from_size_align(size, 16) {
-            unsafe { std::alloc::alloc(layout) }
-        } else {
-            // I don't think it's wise to panic in a allocator but who knows
-            std::ptr::null_mut()
+    extern "C" fn malloc_cb(size: usize, _user_data: *const u8) -> *mut u8 {
+        match Layout::from_size_align(size, 16) {
+            Ok(layout) => unsafe { std::alloc::alloc(layout) },
+            Err(_) => std::ptr::null_mut(),
         }
     }
 
-    extern "C" fn pngdecoder_free(ptr: *mut u8, _user_data: *const u8) {
-        // Switch's global allocator is malloc/free and therefore do not care about the Layout. I don't really see the point of this API.
+    extern "C" fn free_cb(ptr: *mut u8, _user_data: *const u8) {
         unsafe { std::alloc::dealloc(ptr, Layout::new::<()>()) }
     }
 
     pub fn new() -> Self {
-        let this = Self {
-            unk: [0u8;0x8c],
-        };
-
-        unsafe { ctor(&this) }
-
+        let this = Self { _unk: [0u8; 0x8C] };
+        unsafe { png_ctor(&this) };
         this
     }
 
     pub fn initialize(&mut self) {
-        unsafe { initialize(self, Self::pngdecoder_malloc, 0 as _, Self::pngdecoder_free, 0 as _) }
+        unsafe {
+            png_initialize(
+                self,
+                Self::malloc_cb,
+                std::ptr::null(),
+                Self::free_cb,
+                std::ptr::null(),
+            )
+        }
     }
 
-    pub fn set_image_data(&mut self, png: impl AsRef<[u8]>) {
-        let data = png.as_ref();
-        unsafe { set_image_data(self, data.as_ptr(), data.len()) }
+    pub fn set_image_data(&mut self, png: &[u8]) {
+        unsafe { png_set_image_data(self, png.as_ptr(), png.len()) }
     }
 
     pub fn analyze(&mut self) -> PngResult {
-        unsafe { analyze(self) }
+        unsafe { png_analyze(self) }
     }
 
-    pub fn get_dimension(&self) -> Dimension {
-        unsafe { get_dimension(self) }
+    pub fn dimension(&self) -> Dimension {
+        unsafe { png_get_dimension(self) }
     }
-    
 }
 
 impl Drop for PngDecoder {
     fn drop(&mut self) {
-        unsafe { dtor(self) }
+        unsafe { png_dtor(self) }
     }
 }
 
 extern "C" {
     #[link_name = "_ZN2nn5image10PngDecoderC1Ev"]
-    pub fn ctor(this: &PngDecoder);
+    fn png_ctor(this: &PngDecoder);
 
     #[link_name = "_ZN2nn5image10PngDecoderD1Ev"]
-    pub fn dtor(this: &PngDecoder);
-    
+    fn png_dtor(this: &PngDecoder);
+
     #[link_name = "_ZN2nn5image10PngDecoder10InitializeEPFPvmS2_ES2_PFvS2_S2_ES2_"]
-    pub fn initialize(this: &PngDecoder, alloc_fn: extern "C" fn(size: usize, data: *const u8) -> *mut u8, allocate_data: *const u8, free_fn: extern "C" fn(ptr: *mut u8, data: *const u8), free_data: *const u8);
+    fn png_initialize(
+        this: &PngDecoder,
+        alloc_fn: extern "C" fn(size: usize, data: *const u8) -> *mut u8,
+        allocate_data: *const u8,
+        free_fn: extern "C" fn(ptr: *mut u8, data: *const u8),
+        free_data: *const u8,
+    );
 
     #[link_name = "_ZN2nn5image10PngDecoder12SetImageDataEPKvm"]
-    pub fn set_image_data(this: &mut PngDecoder, data: *const u8, size: usize);
+    fn png_set_image_data(this: &mut PngDecoder, data: *const u8, size: usize);
 
     #[link_name = "_ZN2nn5image10PngDecoder7AnalyzeEv"]
-    pub fn analyze(this: &mut PngDecoder) -> PngResult;
+    fn png_analyze(this: &mut PngDecoder) -> PngResult;
 
     #[link_name = "_ZNK2nn5image10PngDecoder12GetDimensionEv"]
-    pub fn get_dimension(this: &PngDecoder) -> Dimension;
+    fn png_get_dimension(this: &PngDecoder) -> Dimension;
 }
 
-fn load_sprite(name: Option<&Il2CppString>, filepath: &str, mut width: i32, mut height: i32, filter_mode: FilterMode) -> Option<&'static mut Sprite> {
-    if let Some(this) = name {
-        let path = Utf8PathBuf::from(filepath)
-            .join(this.to_string())
-            .with_extension("png");
+// (width, height) == (0, 0) means use whatever the file reports, any other value is
+// validated against the PNG's real dimensions
+fn load_sprite(name: Il2CppString, filepath: &str, mut width: i32, mut height: i32, filter_mode: FilterMode) -> Option<Sprite> {
+    if name.is_null() {
+        return None;
+    }
 
-        if let Ok(file) = mods::manager::Manager::get().get_file(&path) {
-            let array = Il2CppArray::from_slice(file).unwrap();
+    let path = Utf8PathBuf::from(filepath).join(name.to_rust_string()).with_extension("png");
+    let file = mods::read(&path).ok()?;
 
-            let mut decoder = PngDecoder::new();
-
-            decoder.initialize();
-            decoder.set_image_data(array.fields.deref());
-
-            if PngResult::Ok == decoder.analyze() {
-                let dim = decoder.get_dimension();
-                if (width, height) != (dim.width, dim.height) {
-                    if (width, height) == (0, 0) { // WxH of 0x0 implies that it could be anything
-                        (width, height) = (dim.width, dim.height);
-                    } else {
-                        panic!("Malformed sprite file\nLocation: {}\nDimensions: {}x{} \nExpected: {}x{}\n\nResize the image to avoid stretching", path, dim.width, dim.height, width, height);
-                    }
-                }
-            }
-
-            let new_texture = Texture2D::new(width, height);
-            
-            if ImageConversion::load_image(new_texture, array) {
-                new_texture.set_filter_mode(filter_mode);
-
-                //println!("Before Sprite::Create");
-                let rect = Rect::new(0.0, 0.0, width as f32, height as f32);
-                let pivot = Vector2::new(0.5, 0.5);
-
-                return Some(Sprite::create2(new_texture, rect, pivot, 100.0, 1, SpriteMeshType::Tight));
+    let mut decoder = PngDecoder::new();
+    decoder.initialize();
+    decoder.set_image_data(&file);
+    if decoder.analyze() == PngResult::Ok {
+        let dim = decoder.dimension();
+        if (width, height) != (dim.width, dim.height) {
+            if (width, height) == (0, 0) {
+                (width, height) = (dim.width, dim.height);
             } else {
-                panic!("Could not load icon at `{}`.\n\nMake sure it is a PNG file with a dimension of {}x{} pixels", path, width, height);
+                panic!(
+                    "Malformed sprite file\nLocation: {}\nDimensions: {}x{}\nExpected: {}x{}\n\nResize the image to avoid stretching",
+                    path, dim.width, dim.height, width, height
+                );
             }
         }
     }
-    None
+
+    let array = Array::<u8>::from_slice(&file)?;
+    let texture = Texture2D::new_9(width, height);
+    if !ImageConversion::load_image_2(texture, array) {
+        panic!(
+            "Could not load icon at `{}`.\n\nMake sure it is a PNG file with a dimension of {}x{} pixels",
+            path, width, height
+        );
+    }
+
+    texture.set_filter_mode(filter_mode);
+    let rect = Rect { m_x_min: 0.0, m_y_min: 0.0, m_width: width as f32, m_height: height as f32 };
+    let pivot = Vector2 { x: 0.5, y: 0.5 };
+    Some(Sprite::create_5(texture, rect, pivot, 100.0, 1u32, SpriteMeshType::tight()))
 }
 
-#[unity::from_offset("UnityEngine", "Texture2D", "get_format")]
-fn texture2d_get_format(this: &Texture2D, method_info: OptionalMethod) -> i32;
+struct QuantizedIcon {
+    palette: RgbaImage,
+    indices: GrayImage,
+}
 
-#[unity::hook("App", "UnitIcon", "UpdateIcon")] // What does this even do?
-pub fn uniticon_update_icon(this: &mut UnitIcon,  method_info: OptionalMethod) {
-    if let Some(index) = this.icon_name {
-        let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
+fn quantize_icon(icon: &RgbaImage) -> QuantizedIcon {
+    let (w, h) = icon.dimensions();
 
-        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path)
-            .or_else(|_|{    // Check if file Unit_Unit.png exist as the default icon
-                index.to_string().split('_').nth(0)
-                    .map(|unit| Utf8PathBuf::from("patches/icon/job").join(format!("{}_{}", unit, unit)).with_extension("png"))
-                    .map(|path| mods::manager::Manager::get().get_file(&path))
-                    .unwrap_or_else(||Err(ModError::MissingFile))
-            })
-        {
-            let unit_icon = image::load_from_memory_with_format(&file, image::ImageFormat::Png).unwrap().to_rgba8();
+    let mut palette = ImageBuffer::new(512, 1);
+    let mut indices = ImageBuffer::new(w, h);
+    let mut lookup: HashMap<[u8; 4], u8> = HashMap::with_capacity(256);
 
-            // Enforce sprite size
-            if (48, 48) != (unit_icon.width(), unit_icon.height()) {
-                panic!("Malformed sprite file\nLocation: {}\nDimensions: {}x{} \nExpected: 48x48\n\nResize the image to avoid stretching", sprite_path, unit_icon.width(), unit_icon.height());
+    let transparent: Rgba<u8> = Rgba([0, 0, 0, 0]);
+    palette.put_pixel(0, 0, transparent);
+    palette.put_pixel(1, 0, transparent);
+    lookup.insert(transparent.0, 0);
+    let mut next_index: u8 = 1;
+
+    for (x, y, pixel) in icon.enumerate_pixels() {
+        let index = match lookup.get(&pixel.0) {
+            Some(&i) => i,
+            None => {
+                if next_index as usize >= 256 {
+                    panic!("Palette has too many colors.");
+                }
+                let slot = next_index as u32 * 2;
+                palette.put_pixel(slot, 0, *pixel);
+                palette.put_pixel(slot + 1, 0, *pixel);
+                lookup.insert(pixel.0, next_index);
+                let assigned = next_index;
+                next_index += 1;
+                assigned
             }
-
-            let palette = make_palette(&unit_icon);
-
-            let palette_sprite = generate_palette_sprite(&palette);
-            let unit_sprite = generate_unit_sprite(&unit_icon, &palette);
-
-            this.pallete_sprite = Some(palette_sprite);
-            this.set_sprite(unit_sprite);
-
-            // Set the UnitIcon as dirty to refresh the material and texture and sprite
-            this
-                .get_class()
-                .get_virtual_method("SetAllDirty")
-                .map(|method| {
-                    let close_anime_all = unsafe {
-                        std::mem::transmute::<_, extern "C" fn(&UnitIcon, &MethodInfo)>(
-                            method.method_info.method_ptr,
-                        )
-                    };
-                    close_anime_all(this, method.method_info);
-                })
-                .unwrap();
-        } else {
-            call_original!(this, method_info)
-        }
-
-    } else {
-        call_original!(this, method_info);
+        };
+        indices.put_pixel(x, y, Luma([index]));
     }
+
+    QuantizedIcon { palette, indices }
+}
+
+fn generate_palette_sprite(palette: &RgbaImage) -> Sprite {
+    let texture = Texture2D::new_4(
+        512,
+        1,
+        GraphicsFormat::r8g8b8a8_srgb(),
+        1, // single mip level
+        TextureCreationFlags::none(),
+    );
+    texture.set_filter_mode(FilterMode::point());
+    texture.set_aniso_level(1);
+
+    let mut png_buf = Vec::<u8>::with_capacity(4096);
+    PngEncoder::new(&mut png_buf)
+        .write_image(palette.as_raw(), 512, 1, ColorType::Rgba8)
+        .expect("palette png encode");
+    let array = Array::<u8>::from_slice(&png_buf).expect("palette array");
+    ImageConversion::load_image_2(texture, array);
+
+    let rect = Rect { m_x_min: 0.0, m_y_min: 0.0, m_width: 512.0, m_height: 1.0 };
+    let pivot = Vector2 { x: 0.0, y: 0.0 };
+    Sprite::create_5(texture, rect, pivot, 100.0, 1u32, SpriteMeshType::full_rect())
+}
+
+fn generate_unit_sprite(indices: &GrayImage) -> Sprite {
+    let flipped = image::imageops::flip_vertical(indices);
+    let (w, h) = flipped.dimensions();
+
+    let texture = Texture2D::new_4(
+        w as i32,
+        h as i32,
+        GraphicsFormat::r8_u_norm(),
+        1, // single mip level
+        TextureCreationFlags::none(),
+    );
+
+    let raw = flipped.as_raw();
+    let array = Array::<u8>::from_slice(raw).expect("index array");
+    texture.set_pixel_data_impl_array(array, 0, 1, raw.len() as i32, 0);
+    texture.set_filter_mode(FilterMode::point());
+    texture.set_aniso_level(1);
+    texture.apply_2(false);
+
+    let rect = Rect { m_x_min: 0.0, m_y_min: 0.0, m_width: w as f32, m_height: h as f32 };
+    let pivot = Vector2 { x: 0.5, y: 0.5 };
+    Sprite::create_5(texture, rect, pivot, 100.0, 1u32, SpriteMeshType::tight())
+}
+
+fn build_unit_icon_sprites(file: &[u8], sprite_path: &Utf8PathBuf) -> (Sprite, Sprite) {
+    let icon = image::load_from_memory_with_format(file, image::ImageFormat::Png)
+        .expect("decode character icon PNG")
+        .to_rgba8();
+
+    if icon.dimensions() != (48, 48) {
+        panic!(
+            "Malformed sprite file\nLocation: {}\nDimensions: {}x{}\nExpected: 48x48\n\nResize the image to avoid stretching",
+            sprite_path,
+            icon.width(),
+            icon.height()
+        );
+    }
+
+    let quantized = quantize_icon(&icon);
+    (
+        generate_palette_sprite(&quantized.palette),
+        generate_unit_sprite(&quantized.indices),
+    )
+}
+
+// Fall back to `Unit_Unit.png` when the exact `Unit_Job_Item.png` is missing
+fn find_unit_icon_file(index_name: Il2CppString) -> Option<(Vec<u8>, Utf8PathBuf)> {
+    let name_str = index_name.to_rust_string();
+    let primary = Utf8PathBuf::from("patches/icon/job").join(&name_str).with_extension("png");
+
+    if let Ok(file) = mods::read(&primary) {
+        return Some((file, primary));
+    }
+
+    let unit = name_str.split('_').next()?;
+    let fallback = Utf8PathBuf::from("patches/icon/job")
+        .join(format!("{unit}_{unit}"))
+        .with_extension("png");
+    mods::read(&fallback).ok().map(|f| (f, fallback))
+}
+
+#[unity::hook("App", "UnitIcon", "UpdateIcon")]
+pub fn uniticon_update_icon(this: UnitIcon, method_info: OptionalMethod) {
+    let icon_name = this.m_icon_name();
+    if !icon_name.is_null() {
+        if let Some((file, path)) = find_unit_icon_file(icon_name) {
+            let (palette_sprite, unit_sprite) = build_unit_icon_sprites(&file, &path);
+            this.set_pallete_sprite(palette_sprite);
+            this.set_sprite(unit_sprite);
+            this.set_all_dirty();
+            return;
+        }
+    }
+    call_original!(this, method_info);
 }
 
 #[unity::hook("App", "UnitIcon", "TrySet")]
-pub fn uniticon_try_set(this: &mut UnitIcon, index_name: Option<&'static Il2CppString>, palette_name: Option<&'static Il2CppString>, method_info: OptionalMethod) -> bool {
-    if let Some(index) = index_name {
-        // Check if we have a sprite file with that name before proceeding  (Unit_Job_Item.png)
-        let sprite_path = Utf8PathBuf::from("patches/icon/job").join(index.to_string()).with_extension("png");
-        if let Ok(file) = mods::manager::Manager::get().get_file(&sprite_path)
-            .or_else(|_|{    // Check if file Unit_Unit.png exist as the default icon
-                index.to_string().split('_').nth(0)
-                    .map(|unit| Utf8PathBuf::from("patches/icon/job").join(format!("{}_{}", unit, unit)).with_extension("png"))
-                    .map(|path| mods::manager::Manager::get().get_file(&path))
-                    .unwrap_or_else(||Err(ModError::MissingFile))
-            })
-        {
-            let unit_icon = image::load_from_memory_with_format(&file, image::ImageFormat::Png).unwrap().to_rgba8();
-
-            // Enforce sprite size
-            if (48, 48) != (unit_icon.width(), unit_icon.height()) {
-                panic!("Malformed sprite file\nLocation: {}\nDimensions: {}x{} \nExpected: 48x48\n\nResize the image to avoid stretching", sprite_path, unit_icon.width(), unit_icon.height());
-            }
-            let palette = make_palette(&unit_icon);
-
-            let palette_sprite = generate_palette_sprite(&palette);
-            let unit_sprite = generate_unit_sprite(&unit_icon, &palette);
-
-            this.icon_name = index_name;
-            this.pallete_sprite = Some(palette_sprite);
+pub fn uniticon_try_set(
+    this: UnitIcon,
+    index_name: Il2CppString,
+    palette_name: Il2CppString,
+    method_info: OptionalMethod,
+) -> bool {
+    if !index_name.is_null() {
+        if let Some((file, path)) = find_unit_icon_file(index_name) {
+            let (palette_sprite, unit_sprite) = build_unit_icon_sprites(&file, &path);
+            this.set_m_icon_name(index_name);
+            this.set_pallete_sprite(palette_sprite);
             this.set_sprite(unit_sprite);
-
-            // Set the UnitIcon as dirty to refresh the material and texture and sprite
-            this
-                .get_class()
-                .get_virtual_method("SetVerticesDirty")
-                .map(|method| {
-                    let close_anime_all = unsafe {
-                        std::mem::transmute::<_, extern "C" fn(&UnitIcon, &MethodInfo)>(
-                            method.method_info.method_ptr,
-                        )
-                    };
-                    close_anime_all(this, method.method_info);
-                })
-                .unwrap();
-
+            this.set_vertices_dirty();
             return true;
         }
-        else if GameIcon::try_get_unit_icon_index(index).is_some() {
+
+        if !GameIcon::tyr_get_unit_icon_index(index_name).is_null() {
             return call_original!(this, index_name, palette_name, method_info);
         }
     }
-    if let Some(palette) = &palette_name {
-        let default_icon = format!("{}_{}", palette, palette);
-        call_original!(this, Some(default_icon.into()), palette_name, method_info)
-    }
-    else {
+
+    if !palette_name.is_null() {
+        let fallback = Il2CppString::new(format!("{0}_{0}", palette_name.to_rust_string()));
+        call_original!(this, fallback, palette_name, method_info)
+    } else {
         call_original!(this, index_name, palette_name, method_info)
     }
 }
 
-pub fn generate_palette_sprite(palette: &RgbaImage) -> &'static mut Sprite {
-    let new_texture = Texture2D::instantiate().unwrap();
-    unsafe { texture2d_ctor2(new_texture, 512, 1, 48, false, None) };
-    new_texture.set_filter_mode(FilterMode::Point);
-    unsafe { texture2d_set_anisolevel(new_texture, 1, None) };
-
-    let mut temp = Vec::<u8>::new();
-    PngEncoder::new(&mut temp).write_image(&palette, 512, 1, ColorType::Rgba8).unwrap();
-    
-    let array = Il2CppArray::from_slice(temp).unwrap();
-    ImageConversion::load_image(new_texture, array);
-    
-    let rect = Rect::new(0.0, 0.0, 512 as f32, 1 as f32);
-    let pivot = Vector2::new(0.0, 0.0);
-    
-    Sprite::create2(new_texture, rect, pivot, 100.0, 1, SpriteMeshType::FullRect)
+#[unity::hook("App", "BondsRingFacePicture", "Get")]
+pub fn bondsringfacepicture_get(ring: RingData, method_info: OptionalMethod) -> Sprite {
+    load_sprite(ring.get_icon(), "patches/icon/face", 300, 300, FilterMode::point())
+        .unwrap_or_else(|| call_original!(ring, method_info))
 }
 
-pub fn generate_unit_sprite(unit_icon: &RgbaImage, palette: &RgbaImage) -> &'static mut Sprite {
-    let r8_icon = make_r8(&unit_icon, &palette);
-    let r8_icon = image::imageops::flip_vertical(&r8_icon);
-
-    let new_texture = Texture2D::instantiate().unwrap();
-    unsafe { texture2d_ctor2(new_texture, 48, 48, 63, false, None) }
-
-    let test: Vec<u8> = r8_icon.pixels().map(|p| p.channels()[0]).collect();
-
-    let len = test.len();
-
-    let array = Il2CppArray::from_slice(test).unwrap();
-    unsafe { texture2d_set_pixel_data_impl_array(new_texture, array, 0, 1, len as i32, 0, None) };
-    new_texture.set_filter_mode(FilterMode::Point);
-    unsafe { texture2d_set_anisolevel(new_texture, 1, None) };
-    unsafe { texture2d_apply(new_texture, false, None) };
-    
-    let rect = Rect::new(0.0, 0.0, 48 as f32, 48 as f32);
-    let pivot = Vector2::new(0.5, 0.5);
-
-    Sprite::create2(new_texture, rect, pivot, 100.0, 1, SpriteMeshType::Tight)
+#[unity::hook("App", "GodFacePicture", "Get")]
+pub fn godfacepicture_getsprite(god: GodData, method_info: OptionalMethod) -> Sprite {
+    load_sprite(god.get_ascii_name(), "patches/icon/emblem/godface", 388, 388, FilterMode::point())
+        .unwrap_or_else(|| call_original!(god, method_info))
 }
-
-#[skyline::from_offset(0x378bb90)]
-fn texture2d_ctor2(this: &Texture2D, width: i32, height: i32, format: i32, mip_chain: bool, method_info: OptionalMethod);
-
-#[unity::from_offset("UnityEngine", "Texture2D", "SetPixelDataImplArray")]
-fn texture2d_set_pixel_data_impl_array(this: &Texture2D, data: &'static mut Array<u8>, mip_level: i32, element_size: i32, data_array_size: i32, source_data_start_index: i32, method_info: OptionalMethod) -> bool;
-
-#[unity::from_offset("UnityEngine", "Texture2D", "Apply")]
-fn texture2d_apply(this: &Texture2D, update_mipmaps: bool, method_info: OptionalMethod);
-
-#[unity::from_offset("UnityEngine", "Texture", "set_anisoLevel")]
-fn texture2d_set_anisolevel(this: &Texture2D, level: i32, method_info: OptionalMethod);
-
-#[unity::from_offset("UnityEngine", "Texture2D", "GetRawTextureData")]
-fn texture2d_get_raw_texture_data(this: &Texture2D, method_info: OptionalMethod) -> &'static mut Array<u8>;
-
-#[skyline::from_offset(0x2f979a0)]
-fn sprite_get_rect(this: &Sprite, method_info: OptionalMethod) -> Rect;
-
-#[skyline::from_offset(0x2f97c40)]
-fn sprite_get_uv(this: &Sprite, method_info: OptionalMethod) -> &'static mut Array<Vector2<f32>>;
-
-#[unity::from_offset("UnityEngine", "ImageConversion", "EncodeToPNG")]
-fn imageconversion_encode_to_png(tex: &Texture2D, method_info: OptionalMethod) -> &'static mut Array<u8>;
-
-pub fn make_palette(uniticon: &RgbaImage) -> RgbaImage {
-    let mut palette = ImageBuffer::new(512, 1);
-    let mut index = 0;
-
-    let transparency_slice: &[u8; 4] = &[0, 0, 0, 0];
-    let transparency = Rgba::from_slice(transparency_slice);
-
-
-    palette.put_pixel(index*2, 0, transparency.to_owned());
-    palette.put_pixel(index*2+1, 0, transparency.to_owned());
-    
-    index += 1;
-
-    for w in 0..uniticon.width() {
-        for h in 0..uniticon.height() {
-            let pixel = uniticon.get_pixel(w, h);
-
-            let mut newcolor = true;
-
-            for x in 0..palette.width() as usize {
-                if pixel == palette.get_pixel(x as u32, 0) {
-                    newcolor = false;
-                    break;
-                }
-            }
-
-            if newcolor {
-                if index >= 256 {
-                    panic!("Palette has too many colors.");
-                }
-
-                palette.put_pixel(index*2, 0, pixel.to_owned());
-                palette.put_pixel(index*2+1, 0, pixel.to_owned());
-
-                index += 1;
-            }
-        }
-    }
-
-    palette
-}
-
-pub fn make_r8(uniticon: &RgbaImage, palette: &RgbaImage) -> GrayImage {
-    let mut r8_icon = ImageBuffer::new(uniticon.width(), uniticon.height());
-    
-    for w in 0..uniticon.width() {
-        for h in 0..uniticon.height() {
-            let pixel = uniticon.get_pixel(w, h);
-
-            for y in 0..palette.width() as usize {
-                let index = y as u8;
-                let color = palette.get_pixel(index as u32 * 2, 0);
-
-                if pixel == color {
-                    let r8_slice = [index];
-                    let r8_color = Luma::from_slice(&r8_slice);
-                    r8_icon.put_pixel(w, h, r8_color.to_owned());
-                    break;
-                }
-            }
-        }
-    }
-    
-    r8_icon
-}
-/*
-pub fn gameicon_loadasync() {
-    let static_fields = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
-
-    if let Ok(dir) = mods::manager::Manager::get().get_directory("patches/icon/skill") {
-        if let Ok(paths) = mods::manager::Manager::get().get_files_in_directory(dir) {
-            for path in paths {
-                if path.extension() == Some("png") {
-                    let stem = Il2CppString::new(path.file_stem().unwrap());
-                    let icon = load_sprite(Some(stem), "patches/icon/skill", 0, 0, FilterMode::Trilinear).unwrap();
-                    // In case there already is an original sprite in the cache
-                    static_fields.skill.cache_table.set_item(stem, icon);
-                }
-            }
-        }
-    }
-}
-*/
-
-#[unity::hook("App", "GameIcon", "TryGetSkill")]
-pub fn get_skill_icon(name: Option<&Il2CppString>, method_info: OptionalMethod)-> &'static mut Sprite {
-    let icon = load_sprite(name, "patches/icon/skill", 56, 56, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(name, method_info),
-    }
-}
-
-//#[unity::hook("App", "GameIcon", "TryGetItem")]
-#[skyline::hook(offset = 0x227cd50)]
-pub fn get_item_icon_string(iconname: Option<&Il2CppString>, method_info: OptionalMethod)-> &'static mut Sprite {
-    let icon = load_sprite(iconname, "patches/icon/item", 64, 64, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(iconname, method_info),
-    }
-}
-
-//#[unity::hook("App", "GameIcon", "TryGetItem")]
-#[skyline::hook(offset = 0x227cdd0)]
-pub fn get_item_icon_itemdata(item: &ItemData, method_info: OptionalMethod)-> &'static mut Sprite {
-	// println!("Item Icon: {}", item.icon.unwrap().to_string());
-
-    let icon = load_sprite(item.icon, "patches/icon/item", 64, 64, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(item, method_info),
-    }
-}
-
-#[skyline::from_offset(0x2d51d80)]
-pub fn facethumbnail_getpath_unit(unit: &mut Unit, method_info: OptionalMethod) -> Option<&'static Il2CppString>;
-
-#[skyline::from_offset(0x2d52340)]
-pub fn facethumbnail_getpath_god(god: &mut GodData, method_info: OptionalMethod) -> Option<&'static Il2CppString>;
-
-#[skyline::hook(offset = 0x2d51cb0)]
-pub fn facethumb_get_unit(unit: &mut Unit, method_info: OptionalMethod)-> &'static mut Sprite {
-    let facethumb_path = unsafe { facethumbnail_getpath_unit(unit, None).unwrap() };
-
-    let icon = load_sprite(Some(facethumb_path), "patches/icon/facethumb/unit", 188, 74, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(unit, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x2d52270)]
-pub fn facethumb_get_god(god: &mut GodData, method_info: OptionalMethod)-> &'static mut Sprite {
-    let facethumb_path = unsafe { facethumbnail_getpath_god(god, None) }.unwrap();
-
-    let icon = load_sprite(Some(facethumb_path), "patches/icon/facethumb/emblem", 188, 74, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(god, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x2d52620)]
-pub fn facethumb_get_ring(ring: &mut RingData, method_info: OptionalMethod)-> &'static mut Sprite {
-    let facethumb_path = ring.icon;
-
-    let icon = load_sprite(Some(facethumb_path), "patches/icon/facethumb/bond", 188, 74, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(ring, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x298ac80)]
-pub fn bondsringfacepicture_get(ring: &mut RingData, method_info: OptionalMethod)-> &'static mut Sprite {
-    let facethumb_path = ring.icon;
-
-    let icon = load_sprite(Some(facethumb_path), "patches/icon/face", 300, 300, FilterMode::Point);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(ring, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x232F8A0)]
-pub fn godfacepicture_getsprite(god: &mut GodData, method_info: OptionalMethod) -> &'static mut Sprite {
-    let ascii_name = god.get_ascii_name();
-
-    let icon = load_sprite(ascii_name, "patches/icon/emblem/godface", 388, 388, FilterMode::Point);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(god, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x227D2F0)]
-pub fn gameicon_trygetgodring_unit(unit: &mut Unit, method_info: OptionalMethod) -> &'static mut Sprite {
-    match unit.get_god_unit() {
-        Some(god) => {
-            let ascii_name = god.data.get_ascii_name();
-            // println!("TryGetGodRing(Unit unit) => {}", ascii_name.unwrap().to_string());
-
-            let icon = load_sprite(ascii_name, "patches/icon/emblem/godring", 74, 74, FilterMode::Trilinear);
-            match icon {
-                Some(sprite) => sprite,
-                None => call_original!(unit, method_info),
-            }
-        },
-
-        None => call_original!(unit, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x227D480)]
-pub fn gameicon_trygetgodring_god(god: &mut GodData, method_info: OptionalMethod) -> &'static mut Sprite {
-    let ascii_name = god.get_ascii_name();
-    // println!("TryGetGodRing(GodData godData) => {}", ascii_name.unwrap().to_string());
-
-    let icon = load_sprite(ascii_name, "patches/icon/emblem/godring", 74, 74, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(god, method_info),
-    }
-}
-
-#[skyline::hook(offset = 0x227D290)]
-pub fn gameicon_trygetgodsymbol(god: &mut GodData, method_info: OptionalMethod) -> &'static mut Sprite {
-    let ascii_name = god.get_ascii_name();
-
-    let icon = load_sprite(ascii_name, "patches/icon/emblem/godsymbol", 72, 72, FilterMode::Trilinear);
-    match icon {
-        Some(sprite) => sprite,
-        None => call_original!(god, method_info),
-    }
-}
-
-fn hex_to_rgba(hex: String) -> Color {
-    let hex_str = hex.trim_start_matches('#'); // Trim # if present
-    let default_color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }; // Default to white if invalid format
-
-    // Check for invalid hex digits
-    if hex_str.chars().any(|c| !c.is_digit(16)) {
-        return default_color;
-    }
-
-    match hex_str.len() {
-        6 => { // RGB hex format
-            let hex_u32 = u32::from_str_radix(&format!("FF{}", hex_str), 16).unwrap();
-            unsafe { colorutils_to_rgba(hex_u32) }
-        },
-        8 => { // RGBA hex format
-            let (rgb, alpha) = hex_str.split_at(6);
-            let hex_u32 = u32::from_str_radix(&format!("{}{}", alpha, rgb), 16).unwrap();
-            unsafe { colorutils_to_rgba(hex_u32) }
-        },
-        _ => default_color, 
-    }
-}
-
-#[skyline::from_offset(0x3530580)]
-fn colorutils_to_rgba(hex: u32) -> Color;
 
 #[unity::hook("App", "GodColorRefineEmblem", "GetColor")]
-pub fn godcolorrefineemblem_getcolor(_this: &(), god: &mut GodData, method_info: OptionalMethod) -> Color {
-    let ascii_name = god.get_ascii_name().unwrap().to_string();
-    let path = Utf8PathBuf::from("patches/icon/emblem/godsymbol")
-            .join(ascii_name)
-            .with_extension("txt");
+pub fn godcolorrefineemblem_getcolor(
+    this: GodColorRefineEmblem,
+    god: GodData,
+    method_info: OptionalMethod,
+) -> Color {
+    let ascii_name = god.get_ascii_name();
+    if ascii_name.is_null() {
+        return call_original!(this, god, method_info);
+    }
 
-    match mods::manager::Manager::get().get_file(&path) {
-        Ok(hex_file) => match String::from_utf8(hex_file) {
-            Ok(hex_string) => hex_to_rgba(hex_string),
-            _ => call_original!(_this, god, method_info),
+    let path = Utf8PathBuf::from("patches/icon/emblem/godsymbol")
+        .join(ascii_name.to_rust_string())
+        .with_extension("txt");
+
+    match mods::read(&path) {
+        Ok(bytes) => match std::str::from_utf8(&bytes) {
+            Ok(hex) => hex_to_rgba(hex),
+            Err(_) => call_original!(this, god, method_info),
         },
-        _ => call_original!(_this, god, method_info),
+        Err(_) => call_original!(this, god, method_info),
     }
 }
 
-#[repr(C)]
-#[unity::class("", "MapUIGauge")]
-pub struct MapUIGauge<'a> {
-    _padding: [u8; 0x38],
-    m_spriteatlas: &'a mut SpriteAtlas,
-    wait_frame_after_event: i32,
-    m_sprites: Option<&'a mut Il2CppArray<Option<&'a mut Sprite>>>,
-    m_dictionary: &'a mut Dictionary<'a, &'a Il2CppString, Option<&'a mut Sprite>>,
+fn hex_to_rgba(hex: &str) -> Color {
+    let hex = hex.trim().trim_start_matches('#');
+    let white = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
+
+    if hex.chars().any(|c| !c.is_ascii_hexdigit()) {
+        return white;
+    }
+
+    match hex.len() {
+        6 => {
+            // ColorUtils expects 0xAARRGGBB
+            let packed = u32::from_str_radix(hex, 16).unwrap_or(0xFFFFFF) | 0xFF00_0000;
+            ColorUtils::to_rgba(packed)
+        }
+        8 => {
+            // Input 0xRRGGBBAA, shuffle to 0xAARRGGBB
+            let rgba = u32::from_str_radix(hex, 16).unwrap_or(0xFFFFFFFF);
+            let packed = (rgba >> 8) | (rgba << 24);
+            ColorUtils::to_rgba(packed)
+        }
+        _ => white,
+    }
 }
 
-#[repr(C)]
-pub struct MapUIGaugeStaticFields {
-    pub icon_names: &'static mut Array<&'static mut Il2CppString>,
-}
-
-// TODO: Probably try to store the sprite in the Sprites array instead for speed when grabbing it again.
 #[skyline::hook(offset = 0x201f7d0)]
-pub fn mapuigauge_getspritebyindex(this: &'static mut MapUIGauge, index: usize, _method_info: OptionalMethod) -> &'static mut Sprite {
-    match this.m_sprites.as_mut().unwrap().get_mut(index) {
-        Some(sprite) => match sprite {
-            Some(sprite) => sprite,
-            None => Sprite::instantiate().unwrap(),
-        },
-        None => Sprite::instantiate().unwrap(),
+pub fn mapuigauge_getspritebyindex(this: MapUIGauge, index: i32, _method_info: OptionalMethod) -> Sprite {
+    let sprites = this.m_sprites();
+    if sprites.is_null() || (index as usize) >= sprites.len() {
+        return Sprite::instantiate().expect("Sprite::instantiate");
+    }
+    let sprite = sprites.get(index as usize);
+    if sprite.is_null() {
+        Sprite::instantiate().expect("Sprite::instantiate")
+    } else {
+        sprite
     }
 }
 
@@ -617,266 +426,287 @@ pub fn mapuigauge_getspritebyindex(this: &'static mut MapUIGauge, index: usize, 
 pub fn mapuigauge_cctor(method_info: OptionalMethod) {
     call_original!(method_info);
 
-    let icons = MapUIGauge::class().get_static_fields_mut::<MapUIGaugeStaticFields>();
+    let existing_names: HashSet<String> = MapUIGauge::icon_names()
+        .into_iter()
+        .filter(|s| !s.is_null())
+        .map(|s| s.to_rust_string())
+        .collect();
 
-    if let Ok(dir) = mods::manager::Manager::get().get_directory("patches/icon/mapstatus") {
-        if let Ok(paths) = mods::manager::Manager::get().get_files_in_directory(dir) {
-            for path in paths {
-                if path.extension() == Some("png") {
-                    let mut names = icons.icon_names.to_vec();
+    let new_names: Vec<Il2CppString> = mods::list("patches/icon/mapstatus")
+        .filter(|p| p.extension() == Some("png"))
+        .filter_map(|p| p.file_stem())
+        .filter(|stem| !existing_names.contains(*stem))
+        .map(Il2CppString::new)
+        .collect();
 
-                    let filename = path.file_stem().unwrap().into();
-                    if !names.contains(&filename) {
-                        names.push(filename);
-                    }
-                    // Turn the Vec back into a Il2CppArray
-                    icons.icon_names = Il2CppArray::from_slice(&mut names).unwrap();
-                }
-            }
-        }
+    if new_names.is_empty() {
+        return;
+    }
+
+    let mut combined: Vec<Il2CppString> = MapUIGauge::icon_names().into_iter().collect();
+    combined.extend(new_names);
+    if let Some(arr) = Array::<Il2CppString>::from_slice(&combined) {
+        MapUIGauge::set_icon_names(arr);
     }
 }
 
-#[repr(C)]
-#[unity::class("UnityEngine.U2D", "SpriteAtlas")]
-pub struct SpriteAtlas { }
+#[unity::hook("", "MapUIGauge", "OnEnable")]
+pub fn mapuigauge_onenable(this: MapUIGauge, _method_info: OptionalMethod) {
+    if !this.m_sprites().is_null() {
+        return;
+    }
 
-#[skyline::from_offset(0x2f98dc0)]
-pub fn spriteatlas_get_sprite(this: &mut SpriteAtlas, name: &'static Il2CppString, method_info: OptionalMethod) -> Option<&'static mut Sprite>;
+    let atlas = this.m_sprite_atlas();
+    let dictionary = this.m_dictionary();
+    let names = MapUIGauge::icon_names();
+    let len = names.len();
+    let mut temp: Vec<Sprite> = Vec::with_capacity(len);
 
-#[skyline::hook(offset = 0x201f3d0)]
-pub fn mapuigauge_onenable(this: &'static mut MapUIGauge, _method_info: OptionalMethod) {
-    let icons = MapUIGauge::class().get_static_fields_mut::<MapUIGaugeStaticFields>();
+    for (idx, name) in names.into_iter().enumerate() {
+        let sprite = if idx < 0xA7 {
+            atlas.get_sprite(name)
+        } else {
+            load_sprite(name, "patches/icon/mapstatus", 0, 0, FilterMode::bilinear())
+                .unwrap_or_else(|| Sprite::instantiate().expect("Sprite::instantiate"))
+        };
+        temp.push(sprite);
+        dictionary.add(name, sprite);
+    }
 
-    if this.m_sprites.is_none() {
-        let mut temp_sprite = Vec::with_capacity(icons.icon_names.len());
-
-        icons.icon_names.iter().enumerate().for_each(|(idx, name)| {
-            // Load from SpriteAtlas if within the original array length
-            let icon = if idx < 0xA7 {
-                let icon = unsafe { spriteatlas_get_sprite(this.m_spriteatlas, name, None) };
-                temp_sprite.push(icon);
-                unsafe { spriteatlas_get_sprite(this.m_spriteatlas, name, None) }
-            } else {
-                let icon = load_sprite(Some(name), "patches/icon/mapstatus", 0, 0, FilterMode::Bilinear);
-                temp_sprite.push(icon);
-                // Yeaaaaaaaaah... Lifetimes, son.
-                load_sprite(Some(name), "patches/icon/mapstatus", 0, 0, FilterMode::Bilinear)
-            };
-
-            this.m_dictionary.add(&name, icon);
-        });
-
-        this.m_sprites = Array::from_slice(&mut temp_sprite).ok();
+    if let Some(arr) = Array::<Sprite>::from_slice(&temp) {
+        this.set_m_sprites(arr);
     }
 }
-
-#[unity::class("App", "GmapMapInfoContent")]
-pub struct GmapMapInfoContent {
-    unk1: [u8; 0x18],
-    pub map_info_image: &'static mut Image,
-    unk2: [u8;0x90],
-    pub map_info_sprite: &'static Sprite,
-    // ...
-}
-
-#[unity::class("App", "GmapSpot")]
-pub struct GmapSpot { }
-
-impl GmapSpot {
-    pub fn get_chapter(&self) -> &'static mut ChapterData {
-        unsafe { gmapspot_get_chapter(self, None) }
-    }
-}
-
-#[unity::from_offset("App", "GmapSpot", "get_Chapter")]
-pub fn gmapspot_get_chapter(this: &GmapSpot, method_info: OptionalMethod) -> &'static mut ChapterData;
 
 #[unity::hook("App", "GmapMapInfoContent", "SetMapInfo")]
-pub fn gmapinfocontent_setmapinfo_hook(this: &mut GmapMapInfoContent, gmap_spot: &GmapSpot, method_info: OptionalMethod) {
-    // Call it first so the game can assign everything that is not related to the InfoThumb.
+pub fn gmapinfocontent_setmapinfo_hook(this: GmapMapInfoContent, gmap_spot: GmapSpot, method_info: OptionalMethod) {
     call_original!(this, gmap_spot, method_info);
 
     let chapter = gmap_spot.get_chapter();
-    let prefixless_cid = chapter.get_prefixless_cid();
-
-    if let Some(infothumb) = load_sprite(Some(prefixless_cid), "patches/ui/gmap/infothumb", 468, 256, FilterMode::Trilinear) {
-        this.map_info_sprite = infothumb;
-        this.map_info_image.set_sprite(infothumb);
+    if chapter.is_null() {
+        return;
+    }
+    let prefixless = chapter.get_prefixless_cid();
+    if let Some(thumb) = load_sprite(prefixless, "patches/ui/gmap/infothumb", 468, 256, FilterMode::trilinear()) {
+        this.set_m_map_info_sprite(thumb);
+        this.m_map_info_image().set_sprite(thumb);
     }
 }
 
-pub fn add_in_default_sprites() {
-    println!("Adding default sprites");
-    let game_icon_static_fields = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
-    let palettes =
-        game_icon_static_fields.unit_icon_pallete.cache_table.entries.iter().filter(|i| i.key.is_some())
-            .map(|c| c.key.unwrap().to_string()).collect::<Vec<String>>();
-
-    let mut key_sprite_pair =
-        game_icon_static_fields.unit_icon_index.cache_table.entries.iter().filter(|c| c.key.is_some_and(|c| c.to_string().contains("NoWeapon")))
-            .map(|c| { (c.key.unwrap().to_string(), c.value) }).collect::<Vec<_>>();
-    let mut count = 0;
-
-    // For Sprites that have the same UnitIcon and JobIcon String: 556Marth_556Marth_NoWeapon
-    palettes.iter()
-        .filter(|x|
-            GameIcon::try_get_unit_icon_index(format!("{}_{}", x, x).as_str()).is_none() &&
-                GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", x, x)).is_some())
-        .for_each(|emblem|{
-            if let Some(emblem_sprite) = GameIcon::try_get_unit_icon_index(format!("{}_{}_NoWeapon", emblem, emblem)){
-                count += 1;
-                game_icon_static_fields.unit_icon_index.cache_table.add(format!("{}_{}", emblem, emblem).into(), emblem_sprite);
-            }
-        });
-    // Unique Classes that only has a few UnitIcon: 001Lueur_600DragonLord / 051Lueur_601DragonLord
-    JobData::get_list().unwrap().iter().filter(|j| j.unit_icon_id_f.is_some() || j.unit_icon_id_m.is_some() )
-        .for_each(|j|{
-            for job_icon in [j.unit_icon_id_f, j.unit_icon_id_m] {
-                if let Some(icon) = job_icon.map(|icon| icon.to_string()) {
-                    let sprites = key_sprite_pair.iter()
-                        .filter(|x| x.0.contains(icon.as_str())).collect::<Vec<_>>();
-
-                    if sprites.len() > 0 && sprites.len() < 5 { // Unique jobs probably have less than 5 total NoWeapon Sprites
-                        palettes.iter()
-                            .filter(|x|
-                                sprites.iter().any(|sprite| sprite.0.contains(x.as_str()))
-                                    && GameIcon::try_get_unit_icon_index(format!("{}_{}", x, x)).is_none())
-                            .for_each(|palette|{
-                            if let Some(sprite) = sprites.iter()
-                                .find(|sprite| sprite.0.contains(palette.as_str()))
-                            {
-                                count += 1;
-                                game_icon_static_fields.unit_icon_index.cache_table.add(format!("{}_{}", palette, palette).into(), sprite.1);
-                            }
-                        });
-                    }
-                }
-            }
-        });
-
-    let set = PersonData::get_list().unwrap().iter()
-        .filter(|x| x.unit_icon_id.is_some() && x.get_job().is_some())
-        .map(|x| (x.unit_icon_id.unwrap().to_string(), x.get_job().unwrap().parent.hash))
-        .collect::<HashSet<_>>();
-
-    palettes.iter()
-        .filter(|x| GameIcon::try_get_unit_icon_index(format!("{}_{}", x, x)).is_none() )
-        .for_each(|palette| {
-            if let Some(job) = set.iter().find(|x| x.0 == *palette).and_then(|x| JobData::try_get_hash(x.1)) {
-                for job_icon in [job.unit_icon_id_f, job.unit_icon_id_m] {
-                    if let Some(icon) = job_icon.map(|icon| icon.to_string()) {
-                        if let Some((pos, sprite)) = key_sprite_pair.iter()
-                            .enumerate().find(|(_, x)| x.0.contains(icon.as_str()) && x.0.contains(palette.as_str()))
-                        {
-                            let default_key = format!("{}_{}", palette, palette);
-                            if GameIcon::try_get_unit_icon_index(default_key.as_str()).is_none() {
-                                count += 1;
-                                game_icon_static_fields.unit_icon_index.cache_table.add(default_key.into(), sprite.1);
-                                key_sprite_pair.remove(pos);
-                            }
-
-                        }
-                    }
-                }
-            }
-        });
-    println!("Added {} Default Sprites", count);
-}
-
-// GodFace and BondsRingFace have the same static fields
-#[repr(C)]
-pub struct FaceStaticFields {
-    pub path: &'static Il2CppString,
-    pub face_picture: &'static SpriteAtlasManager,
-}
 #[unity::hook("App", "MainSequence", "PostLoadResource")]
-pub fn add_custom_sprites_icons(this: &engage::sequence::mainsequence::MainSequence, method_info: OptionalMethod) {
+pub fn add_custom_sprites_icons(this: MainSequence, method_info: OptionalMethod) {
     call_original!(this, method_info);
     println!("[MainSequence] PostLoadResource");
-    let face_thumbs = &engage::spriteatlasmanager::FaceThumbnail::class().get_static_fields_mut::<FaceThumbnailStaticFields>().face_thumb;
-    let mut added_count = 0;
-    let mut changed = 0;
 
+    let mut counters = AtlasCounters::default();
 
-    for dir in ["patches/icon/facethumb/unit", "patches/icon/facethumb/emblem", "patches/icon/facethumb/bond"] {
-        if let Some(paths) = mods::manager::Manager::get().get_directory(dir).ok()
-            .and_then(|d| mods::manager::Manager::get().get_files_in_directory(d).ok())
-        {
-            for path in paths {
-                if path.extension() == Some("png") {
-                    let filename: &Il2CppString = path.file_stem().unwrap().into();
-                    let f = filename.to_string();
-                    if let Some(sprite) = load_sprite(Some(filename), dir, 188, 74, FilterMode::Trilinear) {
-                        if face_thumbs.cache_table.entries.iter().find(|x| x.key.is_some_and(|key| key.to_string() == f)).is_some() {
-                            println!("Change Facethumb: {}", filename);
-                            changed += 1;
-                            face_thumbs.cache_table.remove(filename);
-
-                        }
-                        else {
-                            println!("Added Facethumb: {}", filename);
-                            added_count += 1;
-                        }
-                        face_thumbs.cache_table.add(filename, sprite);
-                    }
-                }
-            }
-        }
+    let face_thumbs = FaceThumbnail::s_face_thumb();
+    let filter_tri = FilterMode::trilinear();
+    for dir in [
+        "patches/icon/facethumb/unit",
+        "patches/icon/facethumb/emblem",
+        "patches/icon/facethumb/bond",
+    ] {
+        inject_atlas_from_dir(face_thumbs, dir, 188, 74, filter_tri, &mut counters);
     }
-    let game_icon_sf = GameIcon::class().get_static_fields_mut::<GameIconStaticFields>();
-    // these two are loaded in when RingSequence starts, not in MainSequence
-    // let god_face = Il2CppClass::from_name("App", "GodFacePicture").unwrap().get_static_fields_mut::<FaceStaticFields>();
-    // let bond_face = Il2CppClass::from_name("App", "BondsRingFacePicture").unwrap().get_static_fields_mut::<FaceStaticFields>();
-    for (atlas_manager, dir, width, height) in [
-        (&mut game_icon_sf.skill, "patches/icon/skill", 56, 56),
-        (&mut game_icon_sf.item, "patches/icon/item", 64, 64),
-        (&mut game_icon_sf.god_ring, "patches/icon/emblem/godring", 74, 74),
-        (&mut game_icon_sf.god_symbol, "patches/icon/emblem/godsymbol", 72, 72),
-        (&mut game_icon_sf.system, "patches/icon/system", 48, 48),
-        // (&mut god_face.face_picture, "patches/icon/emblem/godface", 388, 388),
-        // (&mut bond_face.face_picture, "patches/icon/face", 300, 300)
-    ]
-    {
-        if let Some(paths) = mods::manager::Manager::get().get_directory(dir).ok()
-            .and_then(|d| mods::manager::Manager::get().get_files_in_directory(d).ok())
-        {
-            for path in paths {
-                if path.extension() == Some("png") {
-                    let filename: &Il2CppString = path.file_stem().unwrap().into();
-                    let f = filename.to_string();
-                    if let Some(sprite) = load_sprite(Some(filename), dir, width, height, FilterMode::Trilinear) {
-                        if atlas_manager.cache_table.entries.iter().find(|x| x.key.is_some_and(|key| key.to_string() == f)).is_some()  {
-                            changed += 1;
-                            atlas_manager.cache_table.remove(filename);
-                            println!("Changed {} in {}",  filename, dir,);
-                        }
-                        else {
-                            added_count += 1;
-                            println!("Added {} from {}", filename, dir, );
-                        }
-                        atlas_manager.cache_table.add(filename, sprite);
-                    }
-                }
-            }
-        }
+
+    let skill = GameIcon::s_skill();
+    let item = GameIcon::s_item();
+    let god_ring = GameIcon::s_god_ring();
+    let god_symbol = GameIcon::s_god_symbol();
+    let system = GameIcon::s_system();
+
+    for (atlas, dir, w, h) in [
+        (skill, "patches/icon/skill", 56, 56),
+        (item, "patches/icon/item", 64, 64),
+        (god_ring, "patches/icon/emblem/godring", 74, 74),
+        (god_symbol, "patches/icon/emblem/godsymbol", 72, 72),
+        (system, "patches/icon/system", 48, 48),
+    ] {
+        inject_atlas_from_dir(atlas, dir, w, h, FilterMode::trilinear(), &mut counters);
     }
-    add_in_default_sprites();
-    println!("Changed/Added Sprite/Facethumb to Dictionaries: {}/{}", changed, added_count);
+
+    add_default_unit_sprites();
+    println!(
+        "Changed/Added Sprite/Facethumb to Dictionaries: {}/{}",
+        counters.changed, counters.added
+    );
 }
+
+#[derive(Default)]
+struct AtlasCounters {
+    added: u32,
+    changed: u32,
+}
+
+fn inject_atlas_from_dir(
+    atlas: SpriteAtlasManager,
+    dir: &str,
+    width: i32,
+    height: i32,
+    filter_mode: FilterMode,
+    counters: &mut AtlasCounters,
+) {
+    let cache = atlas.m_cache_table();
+
+    for path in mods::list(dir) {
+        if path.extension() != Some("png") {
+            continue;
+        }
+        let Some(stem) = path.file_stem() else { continue };
+        let filename = Il2CppString::new(stem);
+        let Some(sprite) = load_sprite(filename, dir, width, height, filter_mode) else {
+            continue;
+        };
+
+        if cache.contains_key(filename) {
+            cache.remove(filename);
+            counters.changed += 1;
+            println!("Changed {} in {}", filename, dir);
+        } else {
+            counters.added += 1;
+            println!("Added {} from {}", filename, dir);
+        }
+        cache.add(filename, sprite);
+    }
+}
+
+// Ensures every palette has a matching `<palette>_<palette>` unit-icon entry so the
+// game falls back gracefully when a specific Unit_Job pair is missing
+fn add_default_unit_sprites() {
+    println!("Adding default sprites");
+
+    let unit_icon_cache = GameIcon::s_unit_icon_index().m_cache_table();
+    let palette_cache = GameIcon::s_unit_icon_pallete().m_cache_table();
+
+    let palettes: Vec<Il2CppString> = palette_cache
+        .iter()
+        .filter_map(|(k, _)| (!k.is_null()).then_some(k))
+        .collect();
+
+    let mut key_sprite_pair: Vec<(String, Sprite)> = unit_icon_cache
+        .iter()
+        .filter_map(|(k, v)| {
+            if k.is_null() {
+                return None;
+            }
+            let key_str = k.to_rust_string();
+            key_str.contains("NoWeapon").then_some((key_str, v))
+        })
+        .collect();
+
+    let mut added_count = 0u32;
+
+    for palette in &palettes {
+        let palette_str = palette.to_rust_string();
+        let default_key = format!("{palette_str}_{palette_str}");
+        if !GameIcon::tyr_get_unit_icon_index(Il2CppString::new(&default_key)).is_null() {
+            continue;
+        }
+        let noweapon_key = format!("{default_key}_NoWeapon");
+        let sprite = GameIcon::tyr_get_unit_icon_index(Il2CppString::new(&noweapon_key));
+        if !sprite.is_null() {
+            unit_icon_cache.add(Il2CppString::new(&default_key), sprite);
+            added_count += 1;
+        }
+    }
+
+    for job in JobData::get_list().iter() {
+        for job_icon in [job.get_unit_icon_id_f(), job.get_unit_icon_id_m()] {
+            if job_icon.is_null() {
+                continue;
+            }
+            let icon_str = job_icon.to_rust_string();
+            let matching: Vec<&(String, Sprite)> = key_sprite_pair
+                .iter()
+                .filter(|(k, _)| k.contains(&icon_str))
+                .collect();
+            if matching.is_empty() || matching.len() >= 5 {
+                continue;
+            }
+
+            for palette in &palettes {
+                let palette_str = palette.to_rust_string();
+                if !matching.iter().any(|(k, _)| k.contains(&palette_str)) {
+                    continue;
+                }
+                let default_key = format!("{palette_str}_{palette_str}");
+                if !GameIcon::tyr_get_unit_icon_index(Il2CppString::new(&default_key)).is_null() {
+                    continue;
+                }
+                if let Some((_, sprite)) = matching.iter().find(|(k, _)| k.contains(&palette_str)) {
+                    unit_icon_cache.add(Il2CppString::new(&default_key), *sprite);
+                    added_count += 1;
+                }
+            }
+        }
+    }
+
+    let palette_to_jobs: HashMap<String, Vec<JobData>> = {
+        let mut map: HashMap<String, Vec<JobData>> = HashMap::new();
+        for person in PersonData::get_list().iter() {
+            let icon_id = person.get_unit_icon_id();
+            let job = person.get_job();
+            if icon_id.is_null() || job.is_null() {
+                continue;
+            }
+            map.entry(icon_id.to_rust_string()).or_default().push(job);
+        }
+        map
+    };
+
+    for palette in &palettes {
+        let palette_str = palette.to_rust_string();
+        let default_key = format!("{palette_str}_{palette_str}");
+        if !GameIcon::tyr_get_unit_icon_index(Il2CppString::new(&default_key)).is_null() {
+            continue;
+        }
+        let Some(jobs) = palette_to_jobs.get(&palette_str) else { continue };
+
+        'jobs: for job in jobs {
+            for job_icon in [job.get_unit_icon_id_f(), job.get_unit_icon_id_m()] {
+                if job_icon.is_null() {
+                    continue;
+                }
+                let icon_str = job_icon.to_rust_string();
+                if let Some(pos) = key_sprite_pair
+                    .iter()
+                    .position(|(k, _)| k.contains(&icon_str) && k.contains(&palette_str))
+                {
+                    let (_, sprite) = key_sprite_pair.remove(pos);
+                    unit_icon_cache.add(Il2CppString::new(&default_key), sprite);
+                    added_count += 1;
+                    break 'jobs;
+                }
+            }
+        }
+    }
+    // Default Icons that are not 'NoWeapon'
+    for key in ["102Louis_630LanceArmor_Lance", "153Chloe_646LancePegasus_Lance", "203Umber_637LanceKnight_Lance", "250Jade_631AxArmor_Ax"]{
+        let palette = key.split_once('_').unwrap().0;
+        let default_key = format!("{palette}_{palette}_NoWeapon");
+        let sprite = GameIcon::tyr_get_unit_icon_index(Il2CppString::new(key));
+        if GameIcon::tyr_get_unit_icon_index(Il2CppString::new(&default_key)).is_null() {
+            unit_icon_cache.add(Il2CppString::new(&default_key), sprite);
+            added_count += 1;
+        }
+    }
+    println!("Added {} Default Sprites", added_count);
+}
+
 pub static SPRITES_PATCHED: AtomicBool = AtomicBool::new(false);
 
-// now is useless?
 pub extern "C" fn add_default_sprites(evt: &crate::api::events::Event<SystemEvent>) {
-    if let crate::api::events::Event::Args(ev) = evt {
-        if let SystemEvent::ProcInstJump { proc, .. } = ev {
-            if proc.hashcode == crate::sequences::titleloop::TITLELOOPSEQUENCE_HASHCODE {
-                if !SPRITES_PATCHED.load(std::sync::atomic::Ordering::Relaxed) {
-                    add_in_default_sprites();
-                    // gameicon_loadasync();
-                    SPRITES_PATCHED.store(true, std::sync::atomic::Ordering::Relaxed);
-                }
-            }
-        }
+    use engage::app::procinst::IProcInst;
+
+    let crate::api::events::Event::Args(SystemEvent::ProcInstJump { proc, .. }) = evt else {
+        return;
+    };
+
+    if proc.m_hash_code() == crate::sequences::titleloop::TITLELOOPSEQUENCE_HASHCODE
+        && !SPRITES_PATCHED.load(Ordering::Relaxed)
+    {
+        add_default_unit_sprites();
+        SPRITES_PATCHED.store(true, Ordering::Relaxed);
     }
 }

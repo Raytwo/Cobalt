@@ -21,6 +21,12 @@ impl SupportBook {
     }
 }
 
+impl Default for SupportBook {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Astra, Debug, Eq, PartialEq, Hash, Clone)]
 pub struct SupportSet {
     #[astra(key = "@Condition", public_array)]
@@ -33,27 +39,20 @@ pub struct SupportSet {
 
 impl super::XmlPatch for SupportBook {
     fn patch(&mut self, patch: Self, original: &Self) {
-        // Process Armory shop
-        patch.sets.data.into_iter().for_each(|(pid, supports)| {
-            // Can eventually finish with a empty group
+        for (pid, supports) in patch.sets.data {
+            // Can eventually finish with an empty group
             if supports.is_empty() {
-                return
+                continue;
             }
 
             // Grab the original group for comparisons
             let original_group = original.sets.data.get(&pid);
 
-            // Get or add the current group to the patched book
-            let current_group = match self.sets.data.get_mut(&pid) {
-                Some(data) => data,
-                None => {
-                    self.sets.data.insert(pid.to_owned(), Vec::new());
-                    self.sets.data.get_mut(&pid).unwrap()
-                },
-            };
+            // Get or insert the current group in the patched book
+            let current_group = self.sets.data.entry(pid).or_default();
 
             // Compare to the original group if it exists, or the patched one if it does not
-            let differ = Differ::new(&original_group.unwrap_or(current_group), &supports);
+            let differ = Differ::new(original_group.unwrap_or(current_group), &supports);
 
             // Process in reverse order so insertions/deletions don't shift the indices
             for span in differ.spans().iter().rev() {
@@ -64,7 +63,7 @@ impl super::XmlPatch for SupportBook {
                         }
                     },
                     Tag::Replace => {
-                        current_group.splice(span.a_start..span.a_end, supports[span.b_start..span.b_end].into_iter().cloned());
+                        current_group.splice(span.a_start..span.a_end, supports[span.b_start..span.b_end].iter().cloned());
                     },
                     Tag::Delete => {
                         for i in (span.a_start..span.a_end).rev() {
@@ -74,6 +73,6 @@ impl super::XmlPatch for SupportBook {
                     _ => (),
                 }
             }
-        });
+        }
     }
 }

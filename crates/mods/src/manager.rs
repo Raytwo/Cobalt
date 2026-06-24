@@ -1,36 +1,114 @@
-// Inspired by the Addressable system. The parent class for everything else
+use std::{
+    collections::HashMap,
+    sync::{Arc, LazyLock},
+};
 
-use std::sync::{Arc, LazyLock};
-
-use camino::{Utf8PathBuf, Utf8Path};
+use camino::{Utf8Path, Utf8PathBuf};
 use dependency_graph::{DependencyGraph, Node, Step};
-use multimap::MultiMap;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-use crate::{discover_mods_manager, vfs::VirtualFS, ModError, interner::HashedPathInterner, builder::FilesystemBuilder, hash};
+use crate::{builder::FilesystemBuilder, discover_mods_manager, hash, vfs::VirtualFS, ModError};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) enum UpdateSource {
+    #[serde(rename = "github")]
+    GitHub { user: String, repo: String },
+    #[serde(rename = "gamebanana")]
+    GameBanana { item_type: String, item_id: u64 },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub(crate) enum Dependency {
+    Id(String),
+    Detailed {
+        id: String,
+        #[serde(default)]
+        update_sources: Vec<UpdateSource>,
+    },
+}
+
+impl Dependency {
+    pub(crate) fn id(&self) -> &str {
+        match self {
+            Dependency::Id(id) => id,
+            Dependency::Detailed { id, .. } => id,
+        }
+    }
+}
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct ModConfig {
+pub(crate) struct ModConfig {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) description: String,
     pub(crate) author: String,
     #[serde(default)]
-    pub(crate) dependencies: Vec<String>,
-    pub(crate) repository: Option<String>
+    pub(crate) dependencies: Vec<Dependency>,
+    #[serde(default)]
+    pub(crate) optional_dependencies: Vec<Dependency>,
+    pub(crate) source_url: Option<String>,
+    #[serde(default)]
+    pub(crate) update_sources: Vec<UpdateSource>,
 }
 
-pub struct ModPair {
+pub struct Mod {
+    pub(crate) vfs: Arc<dyn VirtualFS>,
+    pub(crate) config: ModConfig,
+}
+
+impl Mod {
+    pub fn id(&self) -> Option<&str> {
+        (!self.config.id.is_empty()).then_some(&self.config.id)
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        (!self.config.name.is_empty()).then_some(&self.config.name)
+    }
+
+    pub fn root(&self) -> &Utf8Path {
+        self.vfs.root()
+    }
+
+    pub fn is_writeable(&self) -> bool {
+        self.vfs.is_writeable()
+    }
+
+    pub fn entries(&self) -> impl Iterator<Item = &Utf8Path> {
+        self.vfs.entries().values().map(|p| p.as_path())
+    }
+
+    pub fn read(&self, rel: impl AsRef<Utf8Path>) -> Result<Vec<u8>, ModError> {
+        self.vfs.load(hash(rel))
+    }
+
+    pub fn last_modified(&self, rel: impl AsRef<Utf8Path>) -> Result<u64, ModError> {
+        self.vfs.last_modified(hash(rel))
+    }
+
+    pub fn write(&self, rel: impl AsRef<Utf8Path>, bytes: &[u8]) -> Result<(), ModError> {
+        let rel = rel.as_ref();
+        let target = self
+            .vfs
+            .entries()
+            .get(&hash(rel))
+            .cloned()
+            .unwrap_or_else(|| rel.to_path_buf());
+        self.vfs.write(&target, bytes)
+    }
+}
+
+pub(crate) struct ModPair {
     config: ModConfig,
-    vfs: Arc<dyn VirtualFS>
+    vfs: Arc<dyn VirtualFS>,
+    effective_deps: Vec<String>,
 }
 
 impl Node for ModPair {
     type DependencyType = String;
 
     fn dependencies(&self) -> &[Self::DependencyType] {
-        &self.config.dependencies
+        &self.effective_deps
     }
 
     fn matches(&self, dependency: &Self::DependencyType) -> bool {
@@ -38,416 +116,205 @@ impl Node for ModPair {
     }
 }
 
-// That'd mean we have to make sure every file and child directory are following each others
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DirectoryInfo {
-    pub path: HashToIndex,
-    // Hash
-    pub parent: u32,
-    pub file_hashes: Vec<u32>,
-    pub child_dir_hashes: Vec<u32>,
+pub(crate) struct DirectoryInfo {
+    pub(crate) path: u32,
+    pub(crate) file_hashes: Vec<u32>,
+    pub(crate) child_dir_hashes: Vec<u32>,
 }
 
 impl DirectoryInfo {
-    pub fn new(path: HashToIndex, parent: u32) -> Self {
+    pub(crate) fn new(path: u32) -> Self {
         Self {
             path,
-            parent,
-            .. Default::default()
+            ..Default::default()
         }
-    }
-
-    pub fn new_from_resourcepath(resource_path: &ResourcePath) -> Self {
-        Self {
-            path: resource_path.path,
-            parent: resource_path.parent.hash,
-            .. Default::default()
-        }
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum LookupError {
-    #[error("test")]
-    Missing
-}
-
-// Logically speaking, you'd first search for the index to the _entries table and then use the SearchEntry to find what you need in the Manager
-#[derive(Default)]
-pub struct SearchSection {
-    folders: Vec<HashToIndex>,
-    folder_entries: Vec<SearchEntry>,
-    files: Vec<HashToIndex>,
-    file_entries: Vec<SearchEntry>,
-}
-
-impl SearchSection {
-    fn get_folder_by_hash(&self, hash: u32) -> Result<&HashToIndex, LookupError> {
-        if let Ok(hashtoindex) = self.folders.binary_search_by_key(&hash, |h2i| h2i.hash) {
-            Ok(&self.folders[hashtoindex])
-        } else {
-            Err(LookupError::Missing)
-        }
-    }
-    fn get_folder_entry_by_hash(&self, hash: u32) -> Result<&SearchEntry, LookupError> {
-        self.get_folder_by_hash(hash).map(|h2i| &self.folder_entries[h2i.index as usize])
-    }
-}
-
-// Pair a hash with the relevant index for its path
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct HashToIndex {
-    pub hash: u32,
-    pub index: u32,
-}
-
-// Assuming the table containing these is sorted by hash the hash of the path, binary search on the hash is possible
-pub struct SearchEntry {
-    path: HashToIndex,
-    parent: HashToIndex,
-    filename: HashToIndex,
-    ext: HashToIndex,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ResourcePath {
-    pub path: HashToIndex,
-    pub parent: HashToIndex,
-    pub filename: HashToIndex,
-    pub ext: HashToIndex,
-}
-
-impl ResourcePath {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn new_from_path(path: impl AsRef<Utf8Path>) -> Self {
-        let path = path.as_ref();
-
-        let mut new_path = Self::new();
-
-        new_path.path.hash = hash(path);
-        // Directories don't have extensions
-        new_path.ext.hash = path.extension().map(hash).unwrap_or(0xFFFF_FFFF);
-        new_path.filename.hash = path.file_name().map(hash).unwrap_or(0);
-        new_path.parent.hash = path.parent().map(hash).unwrap_or(0);
-
-        new_path
     }
 }
 
 pub struct Manager {
-    vfs: Vec<Arc<dyn VirtualFS>>,
-    interner: HashedPathInterner<16>,
-    lookup: MultiMap<u32, usize>,
-    paths: Vec<ResourcePath>,
+    mods: Vec<Mod>,
+    lookup: HashMap<u32, Vec<usize>>,
     dir_infos: Vec<DirectoryInfo>,
 }
 
-// TODO: Something to tie the keys to the resource(s) that were found.
-// Do we store the keys with the full paths, or to a matching locator?
-
-
-
-static MANAGER: LazyLock<Manager> = LazyLock::new(|| {
-    // We'll want to get a unique mod entity (the directory with the files, the zip, ...) on each of the possible storages
-    // Locators should be the ones exploring a storage (VirtualFS?) and it's directory
-    // Providers are the ones who take a key and fetch it from the storage source, and perform extra operations on them (MSBT patching?) before returning the Vec<u8>/whatever format?
-    // Should providers be stored in the Manager or be a separate class like Unity? Like MsbtProvider giving you a MessageMap and not a Vec<u8>?
-    // Who stores the key to full path map? The Manager? Each Locator stores the paths it owns? Path storage needs to be optimized through a Interner, so a common place would be better.
-    // What if we want to read a directory on one of the storages? Get files from their extension?
-    // How do we search for something and fast? Something that can be sped up by a binary search would be nice, but that'd require sorting and reducing the possible range. Buckets might be useful here.
-    // If the locators keep track of the files they found, we need a way to know which locator contains what file so we don't walk through each of them every time we need a file.
-    // It is necessary to know ASAP if we own a file or not so hooks like IRawBundle don't slow down the game
-    // So the manager should keep a list of keys with the ID of the appropriate locator(s) in another list
-    // To deal with lowercase/uppercase issues, it might be better to keep a hash that's always lowercase, but be able to look for entries by a case-sensitive key too.
-    // Or actually, always look by lowercase hash, so we ignore casing when it's about finding something
-    // Looking into the HashToIndex from data.arc might be a solution to tie the hashes to the key/locator without taking up a ton more space.
-    // One table for hashes to Locator ID, one table for keys to Locator ID, with a common Vec for both.
-    // For now, let's just worry about SD and ZIPs files
-
-
-    // First, we want to walk in sd:/engage/mods and get back Locators based on whether it's a directory or a ZIP.
-    // Ultimately this isn't the job of the Locator, but for now...
-    let mods = discover_mods_manager("sd:/engage/mods").collect::<Vec<_>>();
-
-    let configs: Vec<ModPair> = mods.iter().map(|vfs| {
-        let config = match vfs.get_config() {
-            Ok(conf) => conf,
-            Err(ModError::ConfigError(_))  => {
-                panic!("Mod '{}' ran into a configuration error. Make sure the file is following the YAML specifications.", vfs.get_root().file_name().unwrap());
-            },
-            Err(_) => ModConfig::default(),
-        };
-
-        ModPair {
-            config,
-            vfs: vfs.clone()
-        }
-    }).collect();
-
-    let mut dependants = Vec::new();
-    let mut standalone = Vec::new();
-    
-    // Split between mods with and without configutation
-    configs.into_iter()
-        .for_each(|pair| {
-            if pair.config.id.is_empty() {
-                standalone.push(pair.vfs)
-            } else {
-                dependants.push(pair);
-            }
-        }
-    );  
-
-    let graph = DependencyGraph::from(dependants.as_slice());
-
-    let mut resolved: Vec<Arc<dyn VirtualFS>> = Vec::new();
-    let unresolved = graph.unresolved_dependencies().cloned().collect::<Vec<_>>();
-
-    graph.into_iter().for_each(|entry| {
-        if let Step::Resolved(pair) = entry {
-            // If none of the dependencies are unresolved, we keep the mod
-            if pair.config.dependencies.iter().filter(|dep| unresolved.contains(dep)).count() == 0 {
-                resolved.push(pair.vfs.clone());
-            } else {
-                // If any of the dependencies are unresolved, we discard the mod and signal to the next ones that this mod is missing
-                for dep in &pair.config.dependencies {
-                    if unresolved.contains(dep) {
-                        panic!("Mod '{}' requires mod dependency '{}' but it is missing.\n\nMake sure you have followed the installation instructions properly.", pair.config.name, dep);
-                    }
-                }
-            }
-        }
-    });
-    
-    // Add the mods with no configuration last
-    resolved.extend(standalone);
-
-    let mut interner = HashedPathInterner::default();
-
-    // Start the list with the root path
-    let mut builder = FilesystemBuilder::new();
-
-    let hash_to_index = resolved.iter().enumerate().flat_map(|(idx, modpack)| {
-
-        modpack.discover().iter().map(|path| {
-            builder.add_file(path);
-
-            interner.add(hash(path.as_path()) as u64, path);
-            (hash(path.as_path()) as u32, idx)
-        }).collect::<Vec<_>>()
-    }).collect::<MultiMap<u32, usize>>();
-        
-    // let hash_to_index = mods.iter().enumerate().flat_map(|(idx, modpack)| {
-    //     modpack.discover().iter().map(|path| {
-    //         builder.add_file(path);
-
-    //         interner.add(hash(path.as_path()) as u64, path);
-    //         (hash(path.as_path()) as u32, idx)
-    //     }).collect::<Vec<_>>()
-    // }).collect::<MultiMap<u32, usize>>();
-
-    // dbg!(&builder.paths);
-    let (paths, dir_infos) = builder.finish();
-
-    // Next, we need to build a table of the hashes for the relative path being tied to the locator
-    
-    Manager {
-        vfs: resolved,
-        interner,
-        lookup: hash_to_index,
-        paths,
-        dir_infos,
-    }
-});
-
+static MANAGER: LazyLock<Manager> = LazyLock::new(|| Manager::from_root("sd:/engage/mods"));
 
 impl Manager {
     pub fn get() -> &'static Manager {
         &MANAGER
     }
 
-    fn transform_key(key: impl AsRef<str>) -> String {
-        // We want the keys to be lowercased for Cobalt
-        key.as_ref().to_string()
-    }
+    pub(crate) fn from_root(root: impl AsRef<Utf8Path>) -> Self {
+        let discovered = discover_mods_manager(root).collect::<Vec<_>>();
 
-    fn get_provider(&self) {
-
-    }
-    
-    pub fn get_directory(&self, path: impl AsRef<Utf8Path>) -> Result<&DirectoryInfo, ModError> {
-        if let Ok(index) = self.dir_infos.binary_search_by_key(&hash(&path), |dirinfo| dirinfo.path.hash) {
-            Ok(&self.dir_infos[index])
-        } else {
-            Err(ModError::MissingDirectoryu32(hash(path)))
-        }
-    }
-
-    pub fn get_path_by_hash(&self, hash: u32) -> Result<&ResourcePath, ModError> {
-        if let Ok(index) = self.paths.binary_search_by_key(&hash, |resource| resource.path.hash) {
-            Ok(&self.paths[index])
-        } else {
-            Err(ModError::MissingDirectoryu32(hash))
-        }
-    }
-
-    pub fn get_directory_by_hash(&self, hash: u32) -> Result<&DirectoryInfo, ModError> {
-        if let Ok(index) = self.dir_infos.binary_search_by_key(&hash, |dirinfo| dirinfo.path.hash) {
-            Ok(&self.dir_infos[index])
-        } else {
-            Err(ModError::MissingDirectoryu32(hash))
-        }
-    }
-
-    pub fn get_parent_directory(&self, dirinfo: &DirectoryInfo) -> Result<&DirectoryInfo, ModError> {
-        if let Ok(index) = self.dir_infos.binary_search_by_key(&dirinfo.parent, |dirinfo| dirinfo.path.hash) {
-            Ok(&self.dir_infos[index])
-        } else {
-            Err(ModError::MissingDirectoryu32(dirinfo.parent))
-        }
-    }
-
-    pub fn get_files_in_directory(&self, dirinfo: &DirectoryInfo) -> Result<Vec<Utf8PathBuf>, ModError> {
-        self.get_paths_in_directory(dirinfo)
-            .map(|path| self.interner.try_get(path.path.hash).ok_or(ModError::MissingFile))
-            .collect()
-    }
-
-    pub fn get_files_in_directory_and_subdir(&self, dirinfo: &DirectoryInfo) -> Result<Vec<Utf8PathBuf>, ModError> {
-        self.get_paths_in_directory_and_subdir(dirinfo)
-            .map(|path| self.interner.try_get(path.path.hash).ok_or(ModError::MissingFile))
-            .collect()
-    }
-
-    fn get_paths_in_directory<'a>(&'a self, dirinfo: &'a DirectoryInfo) -> impl Iterator<Item = &'a ResourcePath> {
-        dirinfo.file_hashes.iter().map(|hash| self.get_path_by_hash(*hash).unwrap())
-    }
-
-    fn get_paths_in_directory_and_subdir<'a>(&'a self, dirinfo: &'a DirectoryInfo) -> impl Iterator<Item = &'a ResourcePath> {
-        self.get_child_directories_and_subdirs(dirinfo).flat_map(|dir| {
-            self.get_paths_in_directory(dir)
-        })
-    }
-
-    /// Look up the DirectoryInfo entries that are children of the provided one
-    fn get_child_directories<'a>(&'a self, dirinfo: &'a DirectoryInfo) -> impl Iterator<Item = &'a DirectoryInfo> {
-        dirinfo.child_dir_hashes.iter().map(|hash| {
-            self.get_directory_by_hash(*hash).unwrap()
-        })
-    }
-
-    fn get_child_directories_and_subdirs<'a>(&'a self, dirinfo: &'a DirectoryInfo) -> DirectoryInfoHierarchyIterator<'a> {
-        DirectoryInfoHierarchyIterator::new(self, dirinfo)
-    }
-
-    pub fn get_full_path(&self, key: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf, ModError> {
-        let hash = hash(key);
-
-        if let Ok(index) = self.paths.binary_search_by_key(&hash, |path| path.path.hash) {
-                self.interner.try_get(self.paths[index].path.hash).ok_or(ModError::MissingFile)
-        } else {
-            Err(ModError::MissingFile)
-        }
-    }
-
-    pub fn get_absolute_full_path(&self, key: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf, ModError> {
-        let key = key.as_ref();
-
-        let hash = hash(key);
-
-        let index = self.lookup.get_vec(&hash).ok_or(ModError::MissingFile)?;
-
-        let root = self.vfs[index[0]].get_root();
-        Ok(root.to_path_buf().join(key))
-    }
-
-    pub fn get_full_path_original(&self, key: impl AsRef<str>) -> Result<Utf8PathBuf, ModError> {
-        self.interner.try_get(hash(key.as_ref())).ok_or(ModError::MissingFile)
-    }
-
-    pub fn exists(&self, key: impl AsRef<Utf8Path>) -> bool {
-        let key = key.as_ref();
-        let hash = hash(key);
-
-        self.lookup.get_vec(&hash).is_some()
-    }
-
-    pub fn get_last_modified(&self, key: impl AsRef<Utf8Path>) -> Result<u64, ModError> {
-        let key = key.as_ref();
-        let hash = hash(key);
-
-        let index = self.lookup.get_vec(&hash).ok_or(ModError::MissingFile)?;
-
-        self.vfs[index[0]].last_modified(key)
-    }
-
-    pub fn get_file(&self, key: impl AsRef<Utf8Path>) -> Result<Vec<u8>, ModError> {
-        let key = key.as_ref();
-
-        let hash = hash(key);
-
-        let index = self.lookup.get_vec(&hash).ok_or(ModError::MissingFile)?;
-
-        self.vfs[index[0]].load(key)
-    }
-
-    pub fn get_files(&self, key: impl AsRef<Utf8Path>) -> Result<Vec<Vec<u8>>, ModError> {
-        let key = key.as_ref();
-
-        let hash = hash(key);
-
-        self.lookup.get_vec(&hash).ok_or(ModError::MissingFile)?.iter().map(|idx| self.vfs[*idx].load(key)).collect()
-    }
-
-    pub fn get_files_with_locations(&self, key: impl AsRef<Utf8Path>) -> Result<Vec<(Vec<u8>, &Utf8Path)>, ModError> {
-        let hash = hash(key);
-
-        let path = self.interner.try_get(hash).ok_or(ModError::MissingFile)?;
-
-        self.lookup.get_vec(&hash)
-            .ok_or(ModError::MissingFile)?
+        let configs: Vec<(ModConfig, Arc<dyn VirtualFS>)> = discovered
             .iter()
-            .map(|idx| { 
-                self.vfs[*idx].load(&path)
-                .map(|file| (file, self.vfs[*idx].get_root()))
+            .map(|vfs| {
+                let config = match vfs.config() {
+                    Ok(conf) => conf,
+                    Err(ModError::Config(_)) => {
+                        panic!(
+                            "Mod '{}' ran into a configuration error. Make sure the file is following the YAML specifications.",
+                            vfs.root().file_name().unwrap()
+                        );
+                    },
+                    Err(_) => ModConfig::default(),
+                };
+
+                (config, vfs.clone())
             })
-            .collect()
-    }
+            .collect();
 
-    pub fn get_locations(&self) -> impl Iterator<Item = Utf8PathBuf> + '_ {
-        self.interner.paths()
-    }
-}
+        let present_ids: std::collections::HashSet<String> = configs
+            .iter()
+            .filter(|(config, _)| !config.id.is_empty())
+            .map(|(config, _)| config.id.clone())
+            .collect();
 
-struct DirectoryInfoHierarchyIterator<'a> {
-    manager: &'a Manager,
-    directories: Vec<&'a DirectoryInfo>,
-}
+        let pairs: Vec<ModPair> = configs
+            .into_iter()
+            .map(|(config, vfs)| {
+                let mut effective_deps: Vec<String> =
+                    config.dependencies.iter().map(|dep| dep.id().to_string()).collect();
+                effective_deps.extend(
+                    config
+                        .optional_dependencies
+                        .iter()
+                        .filter(|optional| present_ids.contains(optional.id()))
+                        .map(|optional| optional.id().to_string()),
+                );
 
-impl<'a> DirectoryInfoHierarchyIterator<'a> {
-    pub fn new(manager: &'a Manager, dir_info: &'a DirectoryInfo) -> Self {
-        Self {
-            manager,
-            directories: vec![dir_info]
+                ModPair { config, vfs, effective_deps }
+            })
+            .collect();
+
+        let mut dependants = Vec::new();
+        let mut standalone = Vec::new();
+
+        for pair in pairs {
+            if pair.config.id.is_empty() {
+                standalone.push(pair);
+            } else {
+                dependants.push(pair);
+            }
         }
 
-    }
-}
+        let graph = DependencyGraph::from(dependants.as_slice());
+        let unresolved = graph.unresolved_dependencies().cloned().collect::<Vec<_>>();
 
-impl<'a> Iterator for DirectoryInfoHierarchyIterator<'a> {
-    type Item = &'a DirectoryInfo;
+        let mut resolved: Vec<Mod> = Vec::new();
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(dir_info) = self.directories.pop() {
-            // Get child directories by hash and push them to be queried later
-            self.directories.extend(self.manager.get_child_directories(dir_info));
-
-            Some(dir_info)
-        } else {
-            None
+        for entry in graph.into_iter() {
+            if let Step::Resolved(pair) = entry {
+                if pair.config.dependencies.iter().all(|dep| !unresolved.iter().any(|u| u == dep.id())) {
+                    resolved.push(Mod {
+                        vfs: pair.vfs.clone(),
+                        config: pair.config.clone(),
+                    });
+                } else {
+                    for dep in &pair.config.dependencies {
+                        if unresolved.iter().any(|u| u == dep.id()) {
+                            panic!(
+                                "Mod '{}' requires mod dependency '{}' but it is missing.\n\nMake sure you have followed the installation instructions properly.",
+                                pair.config.name, dep.id()
+                            );
+                        }
+                    }
+                }
+            }
         }
+
+        resolved.extend(standalone.into_iter().map(|p| Mod { vfs: p.vfs, config: p.config }));
+
+        let mut builder = FilesystemBuilder::new();
+        let mut lookup: HashMap<u32, Vec<usize>> = HashMap::new();
+
+        for (idx, modpack) in resolved.iter().enumerate() {
+            for (&h, canonical) in modpack.vfs.entries() {
+                builder.add_file(canonical, h);
+                lookup.entry(h).or_default().push(idx);
+            }
+        }
+
+        Manager {
+            mods: resolved,
+            lookup,
+            dir_infos: builder.finish(),
+        }
+    }
+
+    pub fn mods(&self) -> impl Iterator<Item = &Mod> {
+        self.mods.iter()
+    }
+
+    pub fn read(&self, path: impl AsRef<Utf8Path>) -> Result<Vec<u8>, ModError> {
+        let h = hash(path);
+        let idx = self.first_provider(h).ok_or(ModError::NotFound)?;
+        self.mods[idx].vfs.load(h)
+    }
+
+    pub fn read_layers(&self, path: impl AsRef<Utf8Path>) -> Result<Vec<Vec<u8>>, ModError> {
+        let h = hash(path);
+        let providers = self.lookup.get(&h).ok_or(ModError::NotFound)?;
+        providers.iter().map(|idx| self.mods[*idx].vfs.load(h)).collect()
+    }
+
+    pub fn contains(&self, path: impl AsRef<Utf8Path>) -> bool {
+        self.lookup.contains_key(&hash(path))
+    }
+
+    pub fn contains_directory(&self, path: impl AsRef<Utf8Path>) -> bool {
+        self.directory(hash(path)).is_some()
+    }
+
+    pub fn last_modified(&self, path: impl AsRef<Utf8Path>) -> Result<u64, ModError> {
+        let h = hash(path);
+        let idx = self.first_provider(h).ok_or(ModError::NotFound)?;
+        self.mods[idx].vfs.last_modified(h)
+    }
+
+    pub fn disk_path(&self, path: impl AsRef<Utf8Path>) -> Option<Utf8PathBuf> {
+        let h = hash(path);
+        let idx = self.first_provider(h)?;
+        let vfs = &self.mods[idx].vfs;
+        Some(vfs.root().join(vfs.canonical_path(h)?))
+    }
+
+    pub fn list<'a>(&'a self, dir: impl AsRef<Utf8Path>) -> impl Iterator<Item = &'a Utf8Path> + 'a {
+        let dir_hash = hash(dir);
+        self.directory(dir_hash)
+            .into_iter()
+            .flat_map(|d| d.file_hashes.iter().copied())
+            .filter_map(move |h| self.canonical_for(h))
+    }
+
+    pub fn list_recursive<'a>(&'a self, dir: impl AsRef<Utf8Path>) -> impl Iterator<Item = &'a Utf8Path> + 'a {
+        let root = hash(dir);
+        let mut file_hashes: Vec<u32> = Vec::new();
+        let mut stack = vec![root];
+        while let Some(dir_hash) = stack.pop() {
+            if let Some(d) = self.directory(dir_hash) {
+                file_hashes.extend(&d.file_hashes);
+                stack.extend(&d.child_dir_hashes);
+            }
+        }
+        file_hashes.into_iter().filter_map(move |h| self.canonical_for(h))
+    }
+
+    fn first_provider(&self, hash: u32) -> Option<usize> {
+        self.lookup.get(&hash).and_then(|v| v.first()).copied()
+    }
+
+    fn canonical_for(&self, hash: u32) -> Option<&Utf8Path> {
+        let idx = self.first_provider(hash)?;
+        self.mods[idx].vfs.canonical_path(hash)
+    }
+
+    fn directory(&self, hash: u32) -> Option<&DirectoryInfo> {
+        self.dir_infos
+            .binary_search_by_key(&hash, |dirinfo| dirinfo.path)
+            .ok()
+            .map(|index| &self.dir_infos[index])
     }
 }

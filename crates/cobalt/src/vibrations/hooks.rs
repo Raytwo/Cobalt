@@ -1,33 +1,32 @@
-use unity::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-pub static mut IS_REWINDING: bool = false;
+use unity::OptionalMethod;
 
-// App.RewindSequence$$Start	7102414b90	void App.RewindSequence$$Start(App_RewindSequence_o * __this, MethodInfo * method)	8
-/// Prevent weird vibrations from playing due to terrain effects which trigger a sound effect when rewinded to.
-#[skyline::hook(offset = 0x2414b90)]
+pub static IS_REWINDING: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+pub fn is_rewinding() -> bool {
+    IS_REWINDING.load(Ordering::Relaxed)
+}
+
+#[unity::hook("App", "RewindSequence", "Start")]
 pub fn rewind_sequence_start(this: *const u8, method_info: OptionalMethod) {
     call_original!(this, method_info);
-    unsafe {
-        IS_REWINDING = true;
-    }
+    IS_REWINDING.store(true, Ordering::Relaxed);
 }
 
 // App.RewindSequence$$CancelRewind	7102415450	void App.RewindSequence$$CancelRewind(App_RewindSequence_o * __this, MethodInfo * method)	108
 /// Resume vibrations if rewinding is cancelled.
-#[skyline::hook(offset = 0x2415450)]
+#[unity::hook("App", "RewindSequence", "CancelRewind")]
 pub fn rewind_sequence_cancel_rewind(this: *const u8, method_info: OptionalMethod) {
     call_original!(this, method_info);
-    unsafe {
-        IS_REWINDING = false;
-    }
+    IS_REWINDING.store(false, Ordering::Relaxed);
 }
 
 // App.RewindSequence$$ExecuteRewind	7102414de0	void App.RewindSequence$$ExecuteRewind(App_RewindSequence_o * __this, MethodInfo * method)	952
 /// Resume vibrations if rewinding is exectued.
-#[skyline::hook(offset = 0x2414de0)]
+#[unity::hook("App", "RewindSequence", "ExecuteRewind")]
 pub fn rewind_sequence_execute_rewind(this: *const u8, method_info: OptionalMethod) {
     call_original!(this, method_info);
-    unsafe {
-        IS_REWINDING = false;
-    }
+    IS_REWINDING.store(false, Ordering::Relaxed);
 }

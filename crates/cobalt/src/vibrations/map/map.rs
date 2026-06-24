@@ -1,12 +1,12 @@
+use engage::unity_engine::vector3::Vector3;
+use unity::OptionalMethod;
+
 use crate::vibrations::queue_handlers::run_vibration_event_by_name;
 use crate::vibrations::util::do_vibrate;
-use unity::prelude::*;
-
-use unity::engine::Vector3;
 
 #[skyline::hook(offset = 0x2291990)]
 pub fn app_game_sound_hit(
-    position: Vector3<f32>,
+    position: Vector3,
     attack_type: i32,
     damage_level: DamageLevel,
     unit_material: *const u8,
@@ -31,7 +31,7 @@ pub enum DamageLevel {
 /// TODO: Differentiate between ally and enemy heals
 pub fn handle_app_game_sound_hit(damage_level: DamageLevel) {
     use DamageLevel::*;
-    let damage_vibration_event_name = match damage_level {
+    let event_name = match damage_level {
         None => "Cobalt_Map_DamageLevel_None",
         Low => "Cobalt_Map_DamageLevel_Low",
         Middle => "Cobalt_Map_DamageLevel_Middle",
@@ -39,5 +39,5 @@ pub fn handle_app_game_sound_hit(damage_level: DamageLevel) {
         Efficacy => "Cobalt_Map_DamageLevel_Efficacy",
         Critical => "Cobalt_Map_DamageLevel_Critical",
     };
-    run_vibration_event_by_name(damage_vibration_event_name);
+    run_vibration_event_by_name(event_name);
 }

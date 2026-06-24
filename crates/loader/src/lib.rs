@@ -128,7 +128,6 @@ impl NroFile {
     }
 }
 
-
 pub struct MountInfo {
     pub modules: Vec<Result<Module, LoaderError>>,
     pub registration_info: RegistrationInfo,
@@ -148,7 +147,7 @@ impl NrrBuilder {
         self.0.push(hash);
     }
 
-    pub fn build<'a>(mut self) -> &'static mut NrrHeader {
+    pub fn build(mut self) -> &'static mut NrrHeader {
         // Sort and then remove duplicate hashes (unallowed) to work with the proper image size
         self.0.sort();
         self.0.dedup();
@@ -180,6 +179,12 @@ impl NrrBuilder {
     }
 }
 
+impl Default for NrrBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn mount_plugins(plugins: impl Iterator<Item = NroFile>) -> Result<MountInfo, LoaderError> {
     use std::alloc;
 
@@ -190,7 +195,7 @@ pub fn mount_plugins(plugins: impl Iterator<Item = NroFile>) -> Result<MountInfo
         let mut nrr = NrrBuilder::new();
 
         for file in &plugins {
-            nrr.register_nro(&file);
+            nrr.register_nro(file);
         }
 
         let header = nrr.build();

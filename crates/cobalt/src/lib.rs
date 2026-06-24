@@ -1,13 +1,16 @@
 #![feature(stmt_expr_attributes)]
 
 use std::cell::RefCell;
-use engage::{
-    gamedata::{Gamedata, GodData},
-    godpool::god_pool_try_get_gid,
-    proc::{ProcInst, ProcInstFields},
-};
-use engage::proc::desc::ProcDesc;
+
+use engage::app::goddata::{GodData, IGodDataMethods};
+use engage::app::godpool::GodPool;
+use engage::app::godunit::IGodUnitMethods;
+use engage::app::procdesc::ProcDesc;
+use engage::app::procinst::ProcInst;
+use engage::app::structdata_1::IStructData_1Methods;
 use unity::prelude::*;
+
+use engage::List_1Ext;
 
 pub mod api;
 pub mod audio;
@@ -17,6 +20,7 @@ pub mod combatui;
 pub mod combatvibration;
 pub mod config;
 pub mod graphics;
+pub mod injection;
 pub mod msbt;
 pub mod ringvibration;
 pub mod save;
@@ -31,93 +35,91 @@ pub mod vibrationevents;
 pub mod vibrations;
 
 #[unity::hook("App", "Game", "GetPatchName")]
-pub fn get_patch_name_hook(method_info: OptionalMethod) -> &'static mut Il2CppString {
+pub fn get_patch_name_hook(method_info: OptionalMethod) -> Il2CppString {
     let game_version = call_original!(method_info).to_string();
-
-    format!("{}\nCobalt {}", game_version, env!("CARGO_PKG_VERSION"),).into()
+    format!("{}\nCobalt {}", game_version, env!("CARGO_PKG_VERSION")).into()
 }
 
-#[unity::class("App", "MapSequence")]
-pub struct MapSequence {
-    proc: ProcInstFields,
-    is_resume: bool,
-    is_loaded: bool,
-    scene_name: Option<&'static Il2CppString>,
-    scene_mode: i32,
-    is_completed: bool,
+#[unity::hook("App", "Database", "Completed")]
+pub fn database_completed_publish_event(method_info: OptionalMethod) {
+    call_original!(method_info);
+    crate::api::events::publish_system_event(api::events::SystemEvent::GamedataLoaded);
 }
 
 #[skyline::hook(offset = 0x281ec70)]
-pub fn procinst_jump(this: &'static ProcInst, label: &i32, method_info: OptionalMethod) {
+pub fn procinst_jump(this: ProcInst, label: *const i32, method_info: OptionalMethod) {
+    let label_value = unsafe { *value_to_int(label) };
     crate::api::events::publish_system_event(api::events::SystemEvent::ProcInstJump {
         proc: this,
-        label: unsafe { *value_to_int(label) },
+        label: label_value,
     });
 
     call_original!(this, label, method_info)
 }
-#[skyline::from_offset(0x0281e4d0)]
-pub fn proc_inst_create_internal(
-    this: &ProcInst,
-    parent: Option<&ProcInst>,
-    desc: &Il2CppArray<&ProcDesc>,
-    name: Option<&Il2CppString>,
-    is_bind: bool,
-    method_info: OptionalMethod) -> &'static ProcInst;
 
-#[skyline::hook(offset=0x280a6b0)]
+#[unity::from_offset("App", "ProcInst", "CreateInternal")]
+pub fn proc_inst_create_internal(
+    this: ProcInst,
+    parent: ProcInst,
+    desc: Array<ProcDesc>,
+    name: Il2CppString,
+    is_bind: bool,
+    method_info: OptionalMethod,
+) -> ProcInst;
+
+#[skyline::hook(offset = 0x280a6b0)]
 pub fn proc_inst_create_bind(
-    this: &'static mut ProcInst,
-    parent: Option<&'static mut ProcInst>,
-    desc: &'static Il2CppArray<&'static ProcDesc>,
-    name: Option<&Il2CppString>,
-    method_info: OptionalMethod) -> &'static ProcInst
-{
-    let proc =
-    unsafe {
-        proc_inst_create_internal(this, parent.as_deref(), desc, name, true, method_info)
-    };
+    this: ProcInst,
+    parent: ProcInst,
+    desc: Array<ProcDesc>,
+    name: Il2CppString,
+    method_info: OptionalMethod,
+) -> ProcInst {
+    let proc = unsafe { proc_inst_create_internal(this, parent, desc, name, true, method_info) };
+
     crate::api::events::publish_system_event(api::events::SystemEvent::ProcInstBind {
         proc: RefCell::new(this),
-        parent: RefCell::new(parent)
+        parent: RefCell::new(parent),
     });
     proc
 }
 
 #[skyline::from_offset(0x429cc8)]
-pub fn value_to_int(value: &i32) -> &i32;
+pub fn value_to_int(value: *const i32) -> *const i32;
 
-pub fn get_gid_from_ascii_name(ascii_name: &str) -> Option<&Il2CppString> {
-    GodData::get_list()?.iter()
-        .find(|data| data.get_ascii_name() == Some(ascii_name.into()))
-        .map(|data| data.gid)
+pub fn get_gid_from_ascii_name(ascii_name: &str) -> Option<Il2CppString> {
+    let needle: Il2CppString = ascii_name.into();
+    let list = GodData::get_list();
+    if list.is_null() {
+        return None;
+    }
+    list.iter()
+        .find(|data| data.get_ascii_name() == needle)
+        .map(|data| data.get_gid())
 }
 
 // allows for easy remapping of engage zones in the ring polish screen by utilizing the goddata's nickname field.
 // makes it consistent with engage zone replacement in engage attacks.
-#[skyline::hook(offset = 0x232E960)]
-pub fn goddata_getengagezoneprefabpath(gid: &Il2CppString, method_info: OptionalMethod) -> &'static Il2CppString {
-    let god_data = unsafe { god_pool_try_get_gid(gid, false, method_info) };
-    match god_data {
-        Some(god) => {
-            let god_nickname = god.data.nickname.to_string();
-            let stripped_identifier = match god_nickname.split('_').nth(2) {
-                Some(identifier) => identifier,
-                None => return call_original!(gid, method_info),
-            };
-
-            match get_gid_from_ascii_name(stripped_identifier) {
-                Some(remapped_gid) => {
-                    if gid == remapped_gid {
-                        return call_original!(gid, method_info);
-                    }
-
-                    println!("[EngageZone] {} => {}", gid, remapped_gid);
-                    call_original!(remapped_gid, method_info)
-                }
-                _ => call_original!(gid, method_info),
-            }
-        },
-        None => call_original!(gid, method_info),
+#[unity::hook("App", "GodData", "GetEngageZonePrefabPath")]
+pub fn goddata_getengagezoneprefabpath(gid: Il2CppString, method_info: OptionalMethod) -> Il2CppString {
+    let god = GodPool::try_get(gid, false);
+    if god.is_null() {
+        return call_original!(gid, method_info);
     }
+
+    let god_nickname = god.get_data().get_nickname().to_string();
+    let Some(stripped_identifier) = god_nickname.split('_').nth(2) else {
+        return call_original!(gid, method_info);
+    };
+
+    let Some(remapped) = get_gid_from_ascii_name(stripped_identifier) else {
+        return call_original!(gid, method_info);
+    };
+
+    if remapped == gid {
+        return call_original!(gid, method_info);
+    }
+
+    println!("[EngageZone] {} => {}", gid, remapped);
+    call_original!(remapped, method_info)
 }

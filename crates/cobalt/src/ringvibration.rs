@@ -1,11 +1,10 @@
-use engage::{
-    gamevariable::GameVariableManager,
-    vibrationmanager::{vibrate as actually_vibrate, FREQ_HIGH, FREQ_LOW},
-};
-use unity::prelude::*;
+use engage::{vibrate as actually_vibrate, FREQ_HIGH, FREQ_LOW};
+use unity::OptionalMethod;
 
+use engage::GameVariableManager;
 use crate::config::ringpolishrumble::ENABLE_POLISH_VIBRATION_KEY;
 
+// repr(C) keeps these ABI-compatible with the IL2CPP int parameters
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub enum Strength {
@@ -40,7 +39,8 @@ pub fn clean_ring(this: *const u8, strength: Strength, hit_result: HitResult, me
 // App.RingCleaning.EffectController$$PlayRubEffect	71022d7f80	UnityEngine_GameObject_o * App.RingCleaning.EffectController$$PlayRubEffect(MethodInfo * method)	272
 // UnityEngine_GameObject_o * App.RingCleaning.EffectController$$PlayRubEffect(MethodInfo *method)
 /// This gets called when holding down R and rotating the stick.
-#[skyline::hook(offset = 0x22d7f80)]
+
+#[unity::hook("App.RingCleaning", "EffectController", "PlayRubEffect")]
 pub fn play_rub_effect(method_info: OptionalMethod) -> *const u8 {
     let result = call_original!(method_info);
     println!("PlayRubEffect");
@@ -59,9 +59,7 @@ pub fn cleaning_start_event(this: *const u8, method_info: OptionalMethod) {
 }
 
 fn vibrate(time: f32, amplitude_magnitude: f32, amp_low: f32, amp_high: f32, freq_low: f32, freq_high: f32) {
-    let vibration_enabled = GameVariableManager::get_bool(ENABLE_POLISH_VIBRATION_KEY);
-    match vibration_enabled {
-        true => actually_vibrate(time, amplitude_magnitude, amp_low, amp_high, freq_low, freq_high),
-        false => (),
+    if GameVariableManager::get_bool(ENABLE_POLISH_VIBRATION_KEY) {
+        actually_vibrate(time, amplitude_magnitude, amp_low, amp_high, freq_low, freq_high);
     }
 }

@@ -1,14 +1,25 @@
-use engage::{combat::Character, gamesound::GameSound, mapmind::MapMind, soundmanager::SoundManager};
+use engage::app::gamesound::GameSound;
+use engage::app::mapmind::{IMapMindMethods, MapMind};
+use engage::app::persondata::IPersonDataMethods;
+use engage::app::singletonclass_1::ISingletonClass_1Methods;
+use engage::app::soundmanager::SoundManager;
+use engage::app::unit::IUnitMethods;
+use engage::combat::character::Character;
+use engage::combat::characterappearance::{CharacterAppearance, ICharacterAppearance};
 use unity::prelude::*;
 
-use crate::audio::{combat_character_appearance_create_for_sound, ParsedVoice, PLAY_ORIGINAL_V_PICK};
+use engage::SoundManagerExt;
 
-// App.SoundManager$$IsEventPlaying	71024f5520	bool App.SoundManager$$IsEventPlaying(App_SoundManager_o * __this, System_String_o * eventName, MethodInfo * method)	28
+use crate::audio::{ParsedVoice, PLAY_ORIGINAL_V_PICK};
+
 #[unity::hook("App", "SoundManager", "IsEventPlaying")]
-pub fn soundmanager_iseventplaying(this: &SoundManager, event_name: Option<&Il2CppString>, _method_info: OptionalMethod) -> bool {
-    event_name.map(|name| this.is_event_playing_with_prefix(name.to_string())).unwrap_or_default()
+pub fn soundmanager_iseventplaying(this: SoundManager, event_name: Il2CppString, _method_info: OptionalMethod) -> bool {
+    if event_name.is_null() {
+        false
+    } else {
+        this.is_event_playing_with_prefix(event_name.to_string())
+    }
 }
-
 
 // This hook is responsible for playing custom V_Pick events.
 //
@@ -43,10 +54,10 @@ pub fn soundmanager_iseventplaying(this: &SoundManager, event_name: Option<&Il2C
 // If none of the above events are loaded, we play the default V_Pick event.
 #[skyline::hook(offset = 0x24f7550)]
 pub fn soundmanager_postevent_with_temporarygameobject(
-    this: &(),
-    event_name: &Il2CppString,
-    gameobject: Option<&()>,
-    character: Option<&Character>,
+    this: IlInstance,
+    event_name: Il2CppString,
+    gameobject: IlInstance,
+    character: Character,
     is_get_position: bool,
     method_info: OptionalMethod,
 ) -> *const u8 {
@@ -61,28 +72,29 @@ pub fn soundmanager_postevent_with_temporarygameobject(
                 return call_original!(this, event_name, gameobject, character, is_get_position, method_info);
             }
 
-            let my_unit = MapMind::get_unit();
-            // Read the `Voice` value. This corresponds to the `Voice` set via the AssetTable.
-            let voice_name = unsafe { combat_character_appearance_create_for_sound(my_unit, None).sound.voice_id };
+            let my_unit = MapMind::get_instance().get_unit();
+            if my_unit.is_null() {
+                return call_original!(this, event_name, gameobject, character, is_get_position, method_info);
+            }
+            let person = my_unit.get_person();
+            if person.is_null() {
+                return call_original!(this, event_name, gameobject, character, is_get_position, method_info);
+            }
 
-            // Check if the voice_name is a special one that defines a main voice and a fallback like `Voice="SeasideDragon!PlayerF"``
-            let _voice_name_parsed = ParsedVoice::parse(voice_name);
+            let appearance = CharacterAppearance::create_for_sound(my_unit);
+            let voice_name = appearance.sound().voice_id;
 
             match ParsedVoice::parse(voice_name) {
-                ParsedVoice::DefaultVoiceEvent(_) => {
-                   // do nothing - legacy behavior
-                },
+                ParsedVoice::DefaultVoiceEvent(_) => {},
                 ParsedVoice::ModdedVoiceEvent(modded_voice) => {
-                    let modded_event = Il2CppString::new(format!("{}_{}", event_string, modded_voice.mod_event));
-                    // Check if we have a loaded custom V_Pick, that looks like V_Pick_<unit_name>, for example V_Pick_SeasideDragon
-                    // if we do, play it.
+                    let modded_event: Il2CppString =
+                        format!("{}_{}", event_string, modded_voice.mod_event).as_str().into();
                     if GameSound::is_event_loaded(modded_event) {
                         println!("[SoundManager] Found modded event: {}", modded_event);
                         return call_original!(this, modded_event, gameobject, character, is_get_position, method_info);
                     }
-                    // Attempt to use the fallback event if the custom V_Pick is not loaded
-                    // For example, this will support a V_Pick_PlayerF event that perhaps other mod might add.
-                    let fallback_event = Il2CppString::new(format!("{}_{}", event_string, modded_voice.fallback_event));
+                    let fallback_event: Il2CppString =
+                        format!("{}_{}", event_string, modded_voice.fallback_event).as_str().into();
                     if GameSound::is_event_loaded(fallback_event) {
                         println!("[SoundManager] Found fallback event: {}", fallback_event);
                         return call_original!(this, fallback_event, gameobject, character, is_get_position, method_info);
@@ -90,8 +102,8 @@ pub fn soundmanager_postevent_with_temporarygameobject(
                 },
             }
 
-            // Try to find an ASCII name fallback for the character. If it exists, use it.
-            let modded_event = Il2CppString::new(format!("{}_{}", event_string, my_unit.get_person().get_ascii_name().unwrap()));
+            let modded_event: Il2CppString =
+                format!("{}_{}", event_string, person.get_ascii_name()).as_str().into();
             println!("[SoundManager] Trying V_Pick_<ascii_name> event: {}", modded_event);
 
             let name = if GameSound::is_event_loaded(modded_event) {

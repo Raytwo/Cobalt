@@ -1,10 +1,9 @@
 use std::sync::{LazyLock, RwLock};
 
-use engage::menu::{
-    config::{ConfigBasicMenuItem, ConfigBasicMenuItemSwitchMethods},
-    BasicMenuResult,
-};
-use unity::prelude::*;
+use engage::root::configbasicmenuitem::{ConfigBasicMenuItem, IConfigBasicMenuItem, IConfigBasicMenuItemMethods};
+use unity::OptionalMethod;
+
+use engage::{BasicMenuResult, ConfigBasicMenuItemSwitchMethods};
 
 use crate::{
     graphics::lod::lod_hook,
@@ -20,18 +19,16 @@ pub static CURRENT_LOD: LazyLock<RwLock<f32>> = LazyLock::new(|| {
 pub struct LodSetting;
 
 impl ConfigBasicMenuItemSwitchMethods for LodSetting {
-    extern "C" fn custom_call(this: &mut ConfigBasicMenuItem, _method_info: OptionalMethod) -> BasicMenuResult {
+    extern "C" fn custom_call(this: ConfigBasicMenuItem, _method_info: OptionalMethod) -> BasicMenuResult {
         let mut current_lod = CURRENT_LOD.write().unwrap();
 
-        let result = ConfigBasicMenuItem::change_key_value_f(*current_lod, 0.1, 3.0, 0.1);
+        let result = ConfigBasicMenuItem::change_key_value_2(*current_lod, 0.1, 3.0, 0.1);
 
         if *current_lod != result {
-            // Store the new LOD in the RwLock then drop the guard so set_render_scale does not deadlock when trying to read the RwLock
             *current_lod = result;
             drop(current_lod);
 
             write_to_path(LOD_PATH, &format!("{:.1}", result));
-            // Force the game to run a LOD refresh
             lod_hook(result, result, None);
 
             Self::set_command_text(this, None);
@@ -43,11 +40,11 @@ impl ConfigBasicMenuItemSwitchMethods for LodSetting {
         }
     }
 
-    extern "C" fn set_command_text(this: &mut ConfigBasicMenuItem, _method_info: OptionalMethod) {
-        this.command_text = format!("{:.1}", CURRENT_LOD.read().unwrap()).into();
+    extern "C" fn set_command_text(this: ConfigBasicMenuItem, _method_info: OptionalMethod) {
+        this.set_m_command_text(format!("{:.1}", CURRENT_LOD.read().unwrap()).into());
     }
 
-    extern "C" fn set_help_text(this: &mut ConfigBasicMenuItem, _method_info: OptionalMethod) {
-        this.help_text = localize::mess::get("lod_helptext").into()
+    extern "C" fn set_help_text(this: ConfigBasicMenuItem, _method_info: OptionalMethod) {
+        this.set_m_help_text(localize::mess::get("lod_helptext").into());
     }
 }

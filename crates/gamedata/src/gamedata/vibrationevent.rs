@@ -1,12 +1,11 @@
 use astra_derive::{Astra, AstraBook};
 use astra_formats::Sheet;
-use std::fmt;
-use std::str::FromStr;
 use strum_macros::EnumString;
 
 use ordered_float::OrderedFloat;
 
 use std::cmp::Eq;
+use std::fmt;
 use std::ops::Add;
 
 #[derive(AstraBook, Clone)]
@@ -112,61 +111,33 @@ impl From<VibrationEventEntry> for VibrationEvent {
     fn from(item: VibrationEventEntry) -> Self {
         VibrationEvent {
             name: item.name,
-            time: item.time.unwrap_or(OrderedFloat(0.0)).into_inner(),
-            amplitude_magnitude: item.amplitude_magnitude.unwrap_or(OrderedFloat(0.0)).into_inner(),
-            amp_low: item.amp_low.unwrap_or(OrderedFloat(0.0)).into_inner(),
-            amp_high: item.amp_high.unwrap_or(OrderedFloat(0.0)).into_inner(),
-            freq_low: item.freq_low.unwrap_or(OrderedFloat(FREQ_LOW)).into_inner(),
-            freq_high: item.freq_high.unwrap_or(OrderedFloat(FREQ_HIGH)).into_inner(),
-            easing_type: item.easing.and_then(|value| match parse_enum::<EasingType>(value) {
-                Ok(x) => Some(x),
-                Err(e) => {
-                    println!("Failed to parse easing type: {}", e);
-                    None
-                },
-            }),
-            vibration_type: item.vibration_type.and_then(|value| match parse_enum::<VibrationType>(value) {
-                Ok(x) => Some(x),
-                Err(e) => {
-                    println!("Failed to parse vibration type: {}", e);
-                    None
-                },
-            }),
+            time: item.time.map_or(0.0, |f| f.0),
+            amplitude_magnitude: item.amplitude_magnitude.map_or(0.0, |f| f.0),
+            amp_low: item.amp_low.map_or(0.0, |f| f.0),
+            amp_high: item.amp_high.map_or(0.0, |f| f.0),
+            freq_low: item.freq_low.map_or(FREQ_LOW, |f| f.0),
+            freq_high: item.freq_high.map_or(FREQ_HIGH, |f| f.0),
+            easing_type: item.easing.and_then(|value| value.parse::<EasingType>().map_err(|_| {
+                println!("Failed to parse easing type: Unknown enum type: {value}");
+            }).ok()),
+            vibration_type: item.vibration_type.and_then(|value| value.parse::<VibrationType>().map_err(|_| {
+                println!("Failed to parse vibration type: Unknown enum type: {value}");
+            }).ok()),
         }
-    }
-}
-
-enum ParseEnumError {
-    UnknownEnumType(String),
-}
-
-impl fmt::Display for ParseEnumError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseEnumError::UnknownEnumType(value) => write!(f, "Unknown enum type: {}", value),
-        }
-    }
-}
-
-fn parse_enum<T: FromStr>(value: String) -> Result<T, ParseEnumError> {
-    match T::from_str(value.as_str()) {
-        Ok(x) => Ok(x),
-        Err(_) => Err(ParseEnumError::UnknownEnumType(value)),
     }
 }
 
 impl From<VibrationEventChainEntry> for VibrationEventChain {
     fn from(item: VibrationEventChainEntry) -> Self {
         VibrationEventChain {
-            name: item.name.to_owned(),
+            name: item.name,
             chain: item
                 .chain
                 .iter()
-                .map(|x| parse_event_chain(x))
-                .filter_map(|x| match x {
+                .filter_map(|s| match parse_event_chain(s) {
                     Ok(x) => Some(x),
                     Err(e) => {
-                        println!("Failed to parse event chain: {}", e);
+                        println!("Failed to parse event chain: {e}");
                         None
                     },
                 })
@@ -184,23 +155,23 @@ enum ParseEventChainError {
 impl fmt::Display for ParseEventChainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseEventChainError::InvalidChainString(value) => write!(f, "Invalid chain string: {}", value),
-            ParseEventChainError::InvalidChainStringMissingComma(value) => write!(f, "Invalid chain string, did you forget a comma?: {}", value),
-            ParseEventChainError::InvalidChainStringParseFloat(value) => write!(f, "Could not parse the chain string duration to f32: {}", value),
+            ParseEventChainError::InvalidChainString(value) => write!(f, "Invalid chain string: {value}"),
+            ParseEventChainError::InvalidChainStringMissingComma(value) => write!(f, "Invalid chain string, did you forget a comma?: {value}"),
+            ParseEventChainError::InvalidChainStringParseFloat(value) => write!(f, "Could not parse the chain string duration to f32: {value}"),
         }
     }
 }
 
-fn parse_event_chain(chain_string: &String) -> Result<VibrationEventChainItem, ParseEventChainError> {
+fn parse_event_chain(chain_string: &str) -> Result<VibrationEventChainItem, ParseEventChainError> {
     use ParseEventChainError::*;
-    let mut split = chain_string.split(",");
+    let mut split = chain_string.split(',');
     let Some(name) = split.next() else {
         return Err(InvalidChainString(chain_string.to_owned()))
     };
     let Some(delay) = split.next() else {
         return Err(InvalidChainStringMissingComma(chain_string.to_owned()))
     };
-    let Some(delay) = delay.parse::<f32>().ok() else {
+    let Ok(delay) = delay.parse::<f32>() else {
         return Err(InvalidChainStringParseFloat(chain_string.to_owned()))
     };
 

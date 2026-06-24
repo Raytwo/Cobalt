@@ -1,9 +1,5 @@
-use unity::prelude::*;
-
-use std::{
-    str::FromStr,
-    ffi::{CStr, CString},
-};
+use std::ffi::{CStr, CString};
+use std::str::FromStr;
 
 use camino::Utf8PathBuf;
 
@@ -54,12 +50,8 @@ pub fn wwise_file_open_hook(path: *const u8, unk1: u64, _unk2: *const u8, unk3: 
     unsafe {
         let relative_path = utfpath.strip_prefix("rom:/").unwrap();
 
-        let manager = mods::manager::Manager::get();
-
-        let res = if let Some(loc) = manager.get_locations().find(|loc| loc == relative_path) {
-            let full_path = manager.get_absolute_full_path(loc).unwrap();
+        let res = if let Some(full_path) = mods::disk_path(relative_path) {
             let new_path = CString::new(full_path.as_str()).unwrap();
-
             skyline::nn::fs::OpenFile(&mut unk3.handle, new_path.as_c_str().to_bytes_with_nul().as_ptr(), 1)
         } else {
             skyline::nn::fs::OpenFile(&mut unk3.handle, path as *const u8, 1)
@@ -77,7 +69,6 @@ pub fn wwise_file_open_hook(path: *const u8, unk1: u64, _unk2: *const u8, unk3: 
 }
 
 #[skyline::hook(offset = 0x24f9010)]
-pub fn wwise_set_state(this: *const u8, valuename: &Il2CppString, method_info: OptionalMethod) {
-    // println!("StateGroup name: {}", valuename.to_string());
+pub fn wwise_set_state(this: *const u8, valuename: unity::Il2CppString, method_info: unity::OptionalMethod) {
     call_original!(this, valuename, method_info)
 }

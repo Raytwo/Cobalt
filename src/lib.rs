@@ -5,11 +5,9 @@ use std::sync::atomic::{
     Ordering::{Relaxed, SeqCst},
 };
 
-use camino::Utf8PathBuf;
 use cobalt::vibrationevents::initialize_vibration_data;
 use log::Log;
 use skyline::{nn, patching::Patch};
-use unity::prelude::*;
 
 use crate::utils::env::is_emulator;
 
@@ -28,7 +26,6 @@ pub fn socket_initialize_hook(pool: *mut u8, pool_size: usize, alloc_pool_size: 
         SOCKET_INIT.store(true, SeqCst);
         call_original!(pool, pool_size, alloc_pool_size, concur_limit)
     } else {
-        // Pretend the operation was successful
         println!("[ozone] nn::socket::Initialize dummied out");
         0
     }
@@ -41,7 +38,6 @@ pub fn socket_initialize_config_hook(pool: *mut u8) -> i32 {
         SOCKET_INIT.store(true, SeqCst);
         call_original!(pool)
     } else {
-        // Pretend the operation was successful
         println!("[ozone] nn::socket::Initialize (Config) dummied out");
 
         0
@@ -57,7 +53,7 @@ pub fn mount_rom_hook(name: *const char, buffer: *const u8, buf_size: usize) -> 
     call_original!(name, buffer, buf_size)
 }
 
-#[skyline::hook(offset = il2cpp::il2cpp_init_scan())]
+#[skyline::hook(offset = unity::il2cpp::fe_engage::il2cpp_init_scan())]
 pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
     let res = call_original!(domain_name);
 
@@ -69,9 +65,10 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
 
     skyline::install_hooks!(
         cobalt::get_patch_name_hook,
-        cobalt::catalog::from_json_hook,
+        cobalt::database_completed_publish_event,
+        cobalt::catalog::catalog_load_complete_hook,
         cobalt::config::configmenu_createbind_hook,
-        cobalt::bundle::irawbundle_load_hook,
+        cobalt::bundle::load_from_file_async_hook,
         cobalt::bundle::textassetbundle_ctor_hook,
         cobalt::sortie::sortietopmenushopsubmenu_createbind_hook,
         cobalt::sequences::mainmenu::topmenu::menu::createmenubind_hook,
@@ -155,18 +152,16 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
         cobalt::support::reliancedata_trygetexp,
     );
 
-    // load up vibration data
+    cobalt::injection::register_all();
+
     initialize_vibration_data();
 
     // Load plugins found on the SD
-    let manager = mods::manager::Manager::get();
-    let root_dir = manager.get_directory(Utf8PathBuf::from("")).unwrap();
-
-    let files = manager.get_files_in_directory(root_dir).unwrap();
+    let files: Vec<&camino::Utf8Path> = mods::list("").collect();
 
     files.iter().filter(|entry| entry.extension() == Some("ips")).for_each(|entry| {
         println!("IPS entry: {}", entry);
-        let file = manager.get_file(entry).unwrap();
+        let file = mods::read(entry).unwrap();
         let patch = ips::Patch::parse(&file).unwrap();
 
         for hunk in patch.hunks() {
@@ -178,7 +173,7 @@ pub fn il2cpp_init_hook(domain_name: *const i8) -> i32 {
 
     let nros = files.iter().filter(|entry| entry.extension() == Some("nro")).map(|entry| {
         println!("NRO entry: {}", entry);
-        loader::NroFile::from_slice(entry.file_stem().unwrap(), manager.get_file(entry).unwrap()).unwrap()
+        loader::NroFile::from_slice(entry.file_stem().unwrap(), mods::read(entry).unwrap()).unwrap()
     });
 
     let loader_results = loader::mount_plugins(nros);
@@ -272,9 +267,15 @@ pub fn main() {
 
     multi_log::MultiLogger::init(loggers, log::Level::Info).unwrap();
 
+    // Has to happen before install_hooks below, otherwise our scan for
+    // il2cpp_init trips over the bytes skyline just patched
+    cobalt::api::il2cpp::init();
+
+    cobalt::api::events::install_event_services();
+
     skyline::install_hooks!(mount_rom_hook, il2cpp_init_hook, socket_initialize_hook, socket_initialize_config_hook);
 
-    // AssetTable table expansion
+    // AssetTable expansion
     Patch::in_text(0x01BAF960).bytes(&[0xE1, 0x03, 0x13, 0x32]).unwrap();
     Patch::in_text(0x01BAF990).bytes(&[0xE1, 0x03, 0x17, 0x32]).unwrap();
     Patch::in_text(0x01BAF9B8).bytes(&[0xE1, 0x03, 0x17, 0x32]).unwrap();
@@ -286,7 +287,6 @@ pub fn main() {
     Patch::in_text(0x0211CE04).bytes(&[0x21, 0xFC, 0x3F, 0x11]).unwrap();
 
     // Skill table expansion
-
     // MOV w1, #0x2000
     Patch::in_text(0x247DD08).bytes(&[0x01, 0x00, 0x84, 0x52]).unwrap();
     // MOV w1, #0x2000
@@ -297,7 +297,6 @@ pub fn main() {
     Patch::in_text(0x249ED70).bytes(&[0xBF, 0x0A, 0x40, 0x71]).unwrap();
 
     // DragonAttributeCommand::Get, fixes the returned value from 8.0 to 16.0
-    
     // FMOV s0, 0x41800000
     Patch::in_text(0x21f8420).bytes(&[0x00, 0x10, 0x26, 0x1e]).unwrap();
 

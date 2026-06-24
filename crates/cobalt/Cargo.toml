@@ -1,29 +1,186 @@
 [package]
 name = "cobalt"
-version = "1.26.0"
+version = "1.30.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-skyline = "0.6"
-unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
-engage = { git = "https://github.com/DivineDragonFanClub/engage" }
+skyline = { workspace = true }
+unity-nx = { workspace = true }
+engage-il2cpp = { workspace = true, features = [
+    "app-basicdialog",
+    "app-basicdialogitem",
+    "app-basicdialogitemno",
+    "app-basicdialogitemyes",
+    "app-basicmenu",
+    "app-basicmenucontent",
+    "app-basicmenuitem",
+    "app-bindholder",
+    "app-bondsringfacepicture",
+    "app-chapterdata",
+    "app-database",
+    "app-dlcmanager",
+    "app-eventscript",
+    "app-eventsequence",
+    "app-facethumbnail",
+    "app-fade",
+    "app-fieldbgmmanager",
+    "app-filecommon",
+    "app-filedata",
+    "app-force",
+    "app-game",
+    "app-gameicon",
+    "app-gamemode",
+    "app-gamesavedata",
+    "app-gamesavedataheader",
+    "app-gamesavedataheaderreader",
+    "app-gamesound",
+    "app-gametime",
+    "app-gameuserdata",
+    "app-gamevariable",
+    "app-gmapmapinfocontent",
+    "app-gmapspot",
+    "app-godcolorrefineemblem",
+    "app-goddata",
+    "app-godfacepicture",
+    "app-godpool",
+    "app-godroomunitselectmenu",
+    "app-godunit",
+    "app-hubfacilitydata",
+    "app-hubitemshopsequence",
+    "app-hubrefineshopsequence",
+    "app-hubsequence",
+    "app-hubweaponshopsequence",
+    "app-itemdata",
+    "app-jobdata",
+    "app-language",
+    "app-mainmenusequence",
+    "app-mainsequence",
+    "app-mapimage",
+    "app-mapmind",
+    "app-mapsequencehuman",
+    "app-mapsystemmenu",
+    "app-mapunitcommandmenu",
+    "app-mess",
+    "app-msgfile",
+    "app-noticemanager",
+    "app-pad",
+    "app-persondata",
+    "app-proc",
+    "app-procboolmethod",
+    "app-procdesc",
+    "app-procinst",
+    "app-procvoidfunction",
+    "app-procvoidmethod",
+    "app-reliancedata",
+    "app-relianceexpdata",
+    "app-resourcemanager_2",
+    "app-rewindsequence",
+    "app-ringcleaningclothanimationevent",
+    "app-ringcleaningsequence",
+    "app-ringdata",
+    "app-savedatamenu",
+    "app-scriptsystem",
+    "app-scriptutil",
+    "app-shoptopmenucontent",
+    "app-singletonclass_1",
+    "app-singletonprocinst_1",
+    "app-skillinheritancesequence",
+    "app-sortietopmenu",
+    "app-soundmanager",
+    "app-soundsystem",
+    "app-spriteatlasmanager_2",
+    "app-structdata_1",
+    "app-textassetbundle",
+    "app-titlebar",
+    "app-titleloopsequence",
+    "app-transporter",
+    "app-unit",
+    "app-uniticon",
+    "app-unititem",
+    "app-unitpool",
+    "app-unitringpool",
+    "app-vibrationmanager",
+    "app-weaponmask",
+    "app-yesmenuitem",
+    "app-yesnodialog",
+    "combat-character",
+    "combat-characterappearance",
+    "combat-charactersound",
+    "combat-combatskip",
+    "combat-combatworld",
+    "combat-damagesound",
+    "combat-hudpopupgroup",
+    "combat-magic",
+    "combat-magicarrivaltype",
+    "combat-magicbulletsettings",
+    "combat-magicsignal",
+    "combat-magicsignalprocessor",
+    "combat-phase",
+    "combat-runtimeanimutil",
+    "combat-side",
+    "moon_sharp-interpreter-dynvalue",
+    "moon_sharp-interpreter-script",
+    "moon_sharp-interpreter-table",
+    "nintendo-message_studio-lib-binlibmsfilebase",
+    "nintendo-message_studio-lib-binmsgfile",
+    "nn-hid-npadbutton",
+    "root-configbasicmenuitem",
+    "root-configmenu",
+    "root-configsequence",
+    "root-mapuigauge",
+    "system-action",
+    "system-collections-generic-dictionary_2",
+    "system-collections-generic-list_1",
+    "system-io-memorystream",
+    "system-io-stream",
+    "system-object",
+    "tm_pro-tmp_text",
+    "unity_engine-addressable_assets-addressables",
+    "unity_engine-addressable_assets-addressablesimpl",
+    "unity_engine-addressable_assets-resource_locators-contentcatalogdata",
+    "unity_engine-addressable_assets-resource_locators-iresourcelocator",
+    "unity_engine-animationevent",
+    "unity_engine-assetbundle",
+    "unity_engine-assetbundlecreaterequest",
+    "unity_engine-assetbundlerequest",
+    "unity_engine-color",
+    "unity_engine-experimental-rendering-graphicsformat",
+    "unity_engine-experimental-rendering-texturecreationflags",
+    "unity_engine-filtermode",
+    "unity_engine-imageconversion",
+    "unity_engine-jsonutility",
+    "unity_engine-monobehaviour",
+    "unity_engine-rect",
+    "unity_engine-rendering-colorutils",
+    "unity_engine-rendering-universal-universalrenderpipelineasset",
+    "unity_engine-resource_management-resource_locations-iresourcelocation",
+    "unity_engine-sprite",
+    "unity_engine-spritemeshtype",
+    "unity_engine-textasset",
+    "unity_engine-texture",
+    "unity_engine-texture2d",
+    "unity_engine-u2d-spriteatlas",
+    "unity_engine-ui-graphic",
+    "unity_engine-ui-image",
+    "unity_engine-vector2",
+    "unity_engine-vector3",
+] }
+cobapi = { workspace = true }
 mods = { path = "../mods" }
 updater = { path = "../updater" }
-localize = { git = "https://github.com/DivineDragonFanClub/localize" }
+localize = { workspace = true }
 # Catalog patching
-addressables-rs = { git = "https://github.com/Raytwo/addressables-rs", version = "0.2" }
-serde = { version = "1.0", default-features = false }
-miniserde = { version = "0.1" }
+addressables-rs = { workspace = true }
+serde = { workspace = true, default-features = false }
 serde_json = "1.0"
-simd-json = "0.17"
-camino = "1.0.7"
-astra_formats = { git = "https://github.com/thane98/astra-formats", default-features = false, features = ["msbt_script"] }
+camino = { workspace = true }
+astra_formats = { workspace = true, features = ["msbt_script"] }
 gamedata = { path = "../gamedata" }
 easer = "0.3.0"
 phf = { version = "0.11", features = ["macros"] }
-lazysimd = { git = "https://github.com/Raytwo/lazysimd" }
+lazysimd = { workspace = true }
 image = { version = "0.24.9", default-features = false, features = ["png"] }
-semver = "1.0.27"
+semver = { workspace = true }
 semver-macro = "0.1.0"

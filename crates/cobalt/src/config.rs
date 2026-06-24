@@ -1,11 +1,9 @@
-use unity::prelude::*;
+use engage::app::basicmenu::BasicMenu;
+use engage::app::procinst::{IProcInstMethods, ProcInst};
+use engage::root::configbasicmenuitem::ConfigBasicMenuItem;
+use unity::{Cast, OptionalMethod};
 
-use engage::{
-    menu::{
-        config::ConfigBasicMenuItem, ConfigMenu
-    },
-    proc::ProcInst, 
-};
+use engage::{BasicMenuExt, ConfigBasicMenuItemExt};
 
 pub mod cobalt;
 pub mod combatpopup;
@@ -27,27 +25,30 @@ pub extern "C" fn cobapi_register_configmenuitem_cb(callback: ConfigMenuItemRegi
     pending_calls.push(callback);
 }
 
-#[skyline::hook(offset = 0x2538a10)]
-pub fn configmenu_createbind_hook(proc: &mut ProcInst, method_info: OptionalMethod) -> &'static *const u8 {
+#[unity::hook("", "ConfigMenu", "CreateBind")]
+pub fn configmenu_createbind_hook(proc: ProcInst, method_info: OptionalMethod) -> unity::IlInstance {
     let res = call_original!(proc, method_info);
 
-    let config_menu = proc.child.as_mut().unwrap().cast_mut::<ConfigMenu<ConfigBasicMenuItem>>();
+    let child = proc.get_child();
 
-    let cobalt_settings = ConfigBasicMenuItem::new_command::<CobaltSubmenu>(localize::mess::get("cobalt_settings_submenu_item_name"));
-    
-    config_menu.add_item(cobalt_settings);
-    
-    if !CONFIGMENUITEM_CB.lock().unwrap().is_empty() {
-        let plugin_settings = ConfigBasicMenuItem::new_command::<PluginSubmenu>(localize::mess::get("plugin_settings_submenu_item_name"));
-        config_menu.add_item(plugin_settings);
+    if !child.is_null() {
+        let menu = unsafe { child.cast::<BasicMenu>() };
+
+        let cobalt_settings = ConfigBasicMenuItem::new_command::<CobaltSubmenu>(
+            localize::mess::get("cobalt_settings_submenu_item_name"),
+        );
+
+        menu.add_item(cobalt_settings);
+
+        let has_plugins = !CONFIGMENUITEM_CB.lock().unwrap().is_empty();
+        if has_plugins {
+            let plugin_settings = ConfigBasicMenuItem::new_command::<PluginSubmenu>(
+                localize::mess::get("plugin_settings_submenu_item_name"),
+            );
+
+            menu.add_item(plugin_settings);
+        }
     }
 
     res
-}
-
-pub extern "C" fn open_anime_all_ondispose(this: &mut ProcInst, _method_info: OptionalMethod) {
-    this.parent.as_ref().unwrap().get_class().get_virtual_method("OpenAnimeAll").map(|method| {
-        let open_anime_all = unsafe { std::mem::transmute::<_, extern "C" fn(&ProcInst, &MethodInfo)>(method.method_info.method_ptr) };
-        open_anime_all(this.parent.as_ref().unwrap(), method.method_info);
-    });
 }

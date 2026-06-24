@@ -8,25 +8,58 @@ authors = ["Shadów", "blujay", "Raytwo"]
 titleid = "0100A6301214E000" # Fire Emblem Engage
 custom-npdm = "packaged/exefs/main.npdm"
 package-resources = [
-    { local = "packaged/romfs/cache.json", package = "engage/cache.lut" },
+    { local = "packaged/romfs/cache.json", package = "engage/cobalt/cache.lut" },
 ]
 
-[dependencies]
+[workspace]
+resolver = "2"
+members = [
+    ".",
+    "crates/cobalt",
+    "crates/gamedata",
+    "crates/loader",
+    "crates/mods",
+    "crates/updater",
+    "ozone_macro",
+]
+
+[workspace.dependencies]
+unity-nx = { git = "https://github.com/DivineDragonFanClub/unity2", tag = "0.1.0" }
+engage-il2cpp = { git = "https://github.com/DivineDragonFanClub/engage-il2cpp", tag = "0.1.0", default-features = false }
+astra_formats = { git = "https://github.com/thane98/astra-formats", default-features = false }
+astra-derive = { git = "https://github.com/thane98/Astra" }
+horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" }
+lazysimd = "0.1"
+localize = { git = "https://github.com/DivineDragonFanClub/localize" }
+addressables-rs = { git = "https://github.com/Raytwo/addressables-rs", version = "0.2" }
+cobapi = { git = "https://github.com/DivineDragonFanClub/cobapi", tag = "0.1.0" }
+cobalt_xml_merge = { git = "https://github.com/DivineDragonFanClub/cobalt_xml_merge", rev = "8204258" }
+differ = { git = "https://github.com/Level0r0s/differ" }
+ips = { git = "https://github.com/Nifyr/ips32" }
+
 skyline = "0.6"
+camino = "1.0.7"
+thiserror = "1.0.30"
+rawzip = "0.4"
+flate2 = { version = "1", default-features = false }
+semver = "1.0.27"
+serde = "1.0"
+
+[dependencies]
 ozone_macro = { path = "./ozone_macro" }
 cobalt = { path = "crates/cobalt" }
 updater = { path = "crates/updater" }
 gamedata = { path = "crates/gamedata" }
 loader = { path = "crates/loader" }
 mods = { path = "crates/mods" }
-unity = { version = "0.3.0", git = "https://github.com/DivineDragonFanClub/unity" }
-engage = { git = "https://github.com/DivineDragonFanClub/engage" }
-horizon-svc = { git = "https://github.com/skyline-rs/horizon-svc" } # We don't include the implementations because exlaunch already has them
-camino = "1.0.7"
-semver = { version = "1" }
+skyline = { workspace = true }
+unity-nx = { workspace = true }
+horizon-svc = { workspace = true }
+camino = { workspace = true }
+semver = { workspace = true }
+ips = { workspace = true }
 log = "0.4"
 multi_log = "0.1.2"
-ips = { git = "https://github.com/Nifyr/ips32" }
 
 [patch.crates-io]
 getrandom = { git = "https://github.com/skyline-rs/getrandom" }
